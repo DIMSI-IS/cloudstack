@@ -567,6 +567,11 @@
            <artifactId>cloud-plugin-shutdown</artifactId>
            <version>${project.version}</version>
        </dependency>
+       <dependency>
+            <groupId>org.apache.cloudstack</groupId>
+            <artifactId>cloud-plugin-backup-backroll</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -999,6 +1004,11 @@
                 <dependency>
                     <groupId>org.apache.cloudstack</groupId>
                     <artifactId>cloud-plugin-backup-veeam</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.cloudstack</groupId>
+                    <artifactId>cloud-plugin-backup-backroll</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>
