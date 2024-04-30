@@ -104,3 +104,4 @@ scripts/.pydevproject
 venv
 node_modules
 .vscode
+systemvmtemplate-4.18.0-kvm.qcow2.bz2
