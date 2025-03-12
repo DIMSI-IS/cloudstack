@@ -31,7 +31,6 @@ import java.util.List;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.BackupOffering;
-import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
 import org.apache.cloudstack.backup.backroll.model.BackrollVmBackup;
 import org.apache.cloudstack.backup.backroll.model.response.BackrollTaskRequestResponse;
@@ -112,10 +111,10 @@ public class BackrollClientTest {
                 .get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
         doReturn(mockResponse).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
 
-        BackrollBackupMetrics metrics = client.getBackupMetrics("dummyVMId", "dummyBackupId");
+        Metric metrics = client.getBackupMetrics("dummyVMId", "dummyBackupId");
 
-        assertEquals(1000L, metrics.getSize());
-        assertEquals(800L, metrics.getDeduplicated());
+        assertEquals(1000L, (long)metrics.getDataSize());
+        assertEquals(800L,  (long)metrics.getBackupSize());
     }
 
     @Test

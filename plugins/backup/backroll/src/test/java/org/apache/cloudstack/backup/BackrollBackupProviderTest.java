@@ -33,7 +33,6 @@ import org.apache.cloudstack.backup.backroll.BackrollClient;
 import org.apache.cloudstack.backup.backroll.utils.BackrollApiException;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
 import org.apache.cloudstack.backup.backroll.model.BackrollVmBackup;
-import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollOffering;
 import org.apache.cloudstack.backup.backroll.model.response.TaskState;
 import org.apache.cloudstack.backup.Backup.Metric;
@@ -165,7 +164,7 @@ public class BackrollBackupProviderTest {
         List<BackrollVmBackup> backupsFromBackroll = Arrays.asList(
                 new BackrollVmBackup("OK", "OK", new Date()));
 
-        BackrollBackupMetrics metrics = new BackrollBackupMetrics(2L, 3L);
+        Metric metrics = new Metric(2L, 3L);
 
         Mockito.doReturn(metrics).when(clientMock).getBackupMetrics(Mockito.anyString(), Mockito.anyString());
         Mockito.doReturn(backupsFromBackroll).when(clientMock).getAllBackupsfromVirtualMachine(Mockito.anyString());
@@ -278,7 +277,7 @@ public class BackrollBackupProviderTest {
         BackrollTaskStatus backupStatus = new BackrollTaskStatus();
         backupStatus.setState(TaskState.SUCCESS);
 
-        BackrollBackupMetrics metrics = new BackrollBackupMetrics(2L, 3L);
+        Metric metrics = new Metric(2L, 3L);
 
         List<BackrollVmBackup> backupsFromBackroll = Arrays.asList(
                 new BackrollVmBackup("OK", "OK", new Date()));
@@ -364,7 +363,7 @@ public class BackrollBackupProviderTest {
 
         Backup.Metric metric = null;
 
-        BackrollBackupMetrics backupMetrics = new BackrollBackupMetrics(100L, 200L);
+        Metric backupMetrics = new Metric(100L, 200L);
         Mockito.doReturn(backupMetrics).when(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
 
         BackupVO savedBackup = new BackupVO();
@@ -382,8 +381,8 @@ public class BackrollBackupProviderTest {
         assertEquals(vm.getAccountId(), result.getAccountId());
         assertEquals(vm.getDomainId(), result.getDomainId());
         assertEquals(vm.getDataCenterId(), result.getZoneId());
-        assertEquals((Long)backupMetrics.getDeduplicated(), result.getSize());
-        assertEquals((Long)backupMetrics.getSize(), result.getProtectedSize());
+        assertEquals(backupMetrics.getDataSize(), result.getSize());
+        assertEquals(backupMetrics.getBackupSize(), result.getProtectedSize());
 
         Mockito.verify(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
         Mockito.verify(backupDao).persist(Mockito.any(BackupVO.class));

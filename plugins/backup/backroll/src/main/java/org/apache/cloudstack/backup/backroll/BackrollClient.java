@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.BackupOffering;
 import org.apache.cloudstack.backup.Backup.Metric;
-import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollOffering;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
 import org.apache.cloudstack.backup.backroll.model.BackrollVmBackup;
@@ -202,11 +201,11 @@ public class BackrollClient {
         return metric;
     }
 
-    public BackrollBackupMetrics getBackupMetrics(String vmId, String backupId)
+    public Metric getBackupMetrics(String vmId, String backupId)
             throws IOException, BackrollApiException {
         logger.info("Trying to get backup metrics for VM: {}, and backup: {}", vmId, backupId);
 
-        BackrollBackupMetrics metrics = null;
+        Metric metrics = null;
 
         BackrollTaskRequestResponse requestResponse = httpProvider.get(
                 String.format("/virtualmachines/%s/backups/%s", vmId, backupId), BackrollTaskRequestResponse.class);
@@ -216,9 +215,9 @@ public class BackrollClient {
         logger.debug(urlToRequest);
 
         BackrollBackupMetricsResponse metricsResponse = httpProvider.waitGet(urlToRequest,
-                BackrollBackupMetricsResponse.class);
+        BackrollBackupMetricsResponse.class);
         if (metricsResponse.info != null) {
-            metrics = new BackrollBackupMetrics(Long.parseLong(metricsResponse.info.originalSize),
+            metrics = new Metric(Long.parseLong(metricsResponse.info.originalSize),
                     Long.parseLong(metricsResponse.info.deduplicatedSize));
         }
         return metrics;
