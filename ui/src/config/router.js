@@ -25,6 +25,7 @@ import { shallowRef } from 'vue'
 import { vueProps } from '@/vue-app'
 
 import compute from '@/config/section/compute'
+import dimsi from '@/config/section/dimsi'
 import storage from '@/config/section/storage'
 import network from '@/config/section/network'
 import image from '@/config/section/image'
@@ -208,7 +209,18 @@ export function asyncRouterMap () {
         component: () => import('@/views/dashboard/Dashboard')
       },
 
+      {
+        path: '/dashboarddimsi',
+        name: 'Dashboard Dimsi',
+        meta: {
+          title: 'label.dashboarddimsi',
+          icon: 'DashboardOutlined'
+        },
+        component: () => import('@/views/dimsi/backroll')
+      },
+
       generateRouterMap(compute),
+      generateRouterMap(dimsi),
       generateRouterMap(storage),
       generateRouterMap(network),
       generateRouterMap(image),
