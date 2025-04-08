@@ -16,15 +16,21 @@
 // under the License.
 import { shallowRef } from 'vue'
 export default {
-  name: 'dimsi',
-  title: 'label.dimsi',
-  icon: 'cloud-outlined',
+  name: 'reporting',
+  title: 'label.reporting',
+  icon: 'fund-projection-screen-outlined',
   children: [
     {
-      name: 'dimsi',
-      title: 'label.backroll',
-      icon: 'ReadOutlined',
-      component: shallowRef(() => import('@/views/dimsi/backroll.vue'))
+      name: 'FinOps',
+      title: 'label.finops',
+      icon: 'area-chart-outlined',
+      component: shallowRef(() => import('@/views/reporting/finops.vue'))
+    },
+    {
+      name: 'GreenOps',
+      title: 'label.greenops',
+      icon: 'line-chart-outlined',
+      component: shallowRef(() => import('@/views/reporting/greenops.vue'))
     }
   ]
 }

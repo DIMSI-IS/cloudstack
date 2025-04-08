@@ -17,15 +17,29 @@
 
 <template>
   <div>
-    <h2>Dimsi !</h2>
+    <chart-card class="dashboard-card">
+        <template #title>
+          <div class="center">
+            <h3>
+              <bank-outlined />
+              {{ $t('label.greenops') }}
+            </h3>
+          </div>
+        </template>
+    </chart-card>
   </div>
 </template>
 
 <script>
 
+import ResourceLayout from '@/layouts/ResourceLayout'
+import ChartCard from '@/components/widgets/ChartCard'
+
 export default {
-  name: 'Backroll',
+  name: 'greenops',
   components: {
+    ResourceLayout,
+    ChartCard
   },
   data () {
     return {
@@ -49,6 +63,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+
+  .dashboard-card {
+    width: 100%;
+    min-height: 370px;
+  }
+
   .breadcrumb-card {
     margin-left: -24px;
     margin-right: -24px;

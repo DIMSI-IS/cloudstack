@@ -16,6 +16,7 @@
 // under the License.
 
 import {
+  AreaChartOutlined,
   AimOutlined,
   ApartmentOutlined,
   ApiOutlined,
@@ -93,6 +94,7 @@ import {
   FormOutlined,
   ForwardOutlined,
   FullscreenOutlined,
+  FundProjectionScreenOutlined,
   FunnelPlotOutlined,
   GatewayOutlined,
   GithubOutlined,
@@ -107,6 +109,7 @@ import {
   InfoCircleOutlined,
   InteractionOutlined,
   KeyOutlined,
+  LineChartOutlined,
   LinkOutlined,
   LoadingOutlined,
   LockOutlined,
@@ -186,6 +189,7 @@ import renderIcon from '@/utils/renderIcon'
 
 export default {
   install: (app) => {
+    app.component('AreaChartOutlined', AreaChartOutlined)
     app.component('AimOutlined', AimOutlined)
     app.component('ApartmentOutlined', ApartmentOutlined)
     app.component('ApiOutlined', ApiOutlined)
@@ -263,6 +267,7 @@ export default {
     app.component('FormOutlined', FormOutlined)
     app.component('ForwardOutlined', ForwardOutlined)
     app.component('FullscreenOutlined', FullscreenOutlined)
+    app.component('FundProjectionScreenOutlined', FundProjectionScreenOutlined)
     app.component('FunnelPlotOutlined', FunnelPlotOutlined)
     app.component('GatewayOutlined', GatewayOutlined)
     app.component('GithubOutlined', GithubOutlined)
@@ -277,6 +282,7 @@ export default {
     app.component('InfoCircleOutlined', InfoCircleOutlined)
     app.component('InteractionOutlined', InteractionOutlined)
     app.component('KeyOutlined', KeyOutlined)
+    app.component('LineChartOutlined', LineChartOutlined)
     app.component('LinkOutlined', LinkOutlined)
     app.component('LoadingOutlined', LoadingOutlined)
     app.component('LockOutlined', LockOutlined)
