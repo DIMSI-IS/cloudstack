@@ -145,14 +145,6 @@
               :yAxisIncrementValue="10"
               :yAxisMeasurementUnit="'%'"
             />
-            <resource-stats-line-chart
-              v-if="selectedMemoryChartType === 1 && selectedMemoryUsageType === 1"
-              :chartLabels="chartLabels"
-              :chartData="resourceUsageHistory.memory.percentage.free"
-              :yAxisInitialMax="100"
-              :yAxisIncrementValue="10"
-              :yAxisMeasurementUnit="'%'"
-            />
           </a-col>
         </a-row>
         <a-row class="chart-row" v-if="diskStatsAvailable">

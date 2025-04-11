@@ -15,15 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 import { shallowRef } from 'vue'
+import store from '@/store'
 export default {
   name: 'reporting',
   title: 'label.reporting',
   icon: 'fund-projection-screen-outlined',
+  permission: ['listSystemVms', 'listVolumesMetrics', 'listRouters', 'listVirtualMachines', 'listVirtualMachinesMetrics', 'listInfrastructure'],
+  filters: () => {
+    if (store.getters.userInfo.roletype === 'Admin') {
+      return ['user', 'all']
+    } else {
+      return []
+    }
+  },
   children: [
     {
       name: 'FinOps',
       title: 'label.finops',
       icon: 'area-chart-outlined',
+      resourceType: 'UserVm',
+      permission: ['listSystemVms', 'listVolumesMetrics', 'listRouters', 'listVirtualMachines', 'listVirtualMachinesMetrics', 'listInfrastructure'],
       component: shallowRef(() => import('@/views/reporting/finops.vue'))
     },
     {

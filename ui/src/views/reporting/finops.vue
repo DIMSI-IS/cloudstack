@@ -40,6 +40,7 @@
         <div class="filter-container">
           <div class="select-container">
             <a-select
+              id="type"
               style="width: 120px">
               <a-select-option value="User">User</a-select-option>
               <a-select-option value="Account">Account</a-select-option>
@@ -49,6 +50,7 @@
           </div>
           <div class="select-container">
             <a-select
+              id="subtype"
               style="width: 120px">
               <a-select-option value="user">User</a-select-option>
               <a-select-option value="account">Account</a-select-option>
@@ -69,112 +71,139 @@
     </chart-card>
     <div class="chart-container">
       <chart-card class="chart-card-left">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                CPU Speed
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <DashboardOutlined />
+            CPU Speed
+            <InfoCircleOutlined class="info-icon" :title="$t('label.see.more.info.cpu.usage')"/>
+          </h3>
+        </div>
+        <div v-if="loaded">
+          <div v-if="chartLabels.length > 0">
+            <resource-stats-line-chart
+              :chartLabels="chartLabels"
+              :chartData="resourceUsageHistory.cpu"
+              :yAxisInitialMax="100"
+              :yAxisIncrementValue="10"
+              :yAxisMeasurementUnit="'%'"
+            />
+          </div>
+        </div>
       </chart-card>
       <chart-card class="chart-card-right">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                CPU Number
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <DashboardOutlined />
+            CPU Number
+          </h3>
+        </div>
+        <div v-if="loaded">
+          <div v-if="chartLabels.length > 0">
+            <resource-stats-line-chart
+              :chartLabels="chartLabels"
+              :chartData="resourceUsageHistory.cpuNumber"
+              :yAxisInitialMax="100"
+              :yAxisIncrementValue="10"
+              :yAxisMeasurementUnit="'%'"
+            />
+          </div>
+        </div>
       </chart-card>
     </div>
     <div class="chart-container">
       <chart-card class="chart-card-left">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                OS Repartition
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <PieChartOutlined />
+            OS Repartition
+          </h3>
+        </div>
       </chart-card>
       <chart-card class="chart-card-right">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                RAM
-              </h3>
+        <div class="center">
+          <h3>
+            <DashboardOutlined />
+            RAM
+          </h3>
+        </div>
+        <div v-if="loaded">
+            <div v-if="chartLabels.length > 0">
+              <resource-stats-line-chart
+                :chartLabels="chartLabels"
+                :chartData="resourceUsageHistory.ramused"
+                :yAxisInitialMax="100"
+                :yAxisIncrementValue="10"
+                :yAxisMeasurementUnit="'%'"
+              />
             </div>
-          </template>
+          </div>
       </chart-card>
     </div>
     <div class="chart-container">
       <chart-card class="chart-card-left">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Bandwith InOut
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <wifi-outlined />
+            Bandwith InOut
+          </h3>
+        </div>
       </chart-card>
       <chart-card class="chart-card-right">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Storage
-              </h3>
+        <div class="center">
+          <h3>
+            <hdd-outlined />
+            Storage
+          </h3>
+        </div>
+        <div v-if="loaded">
+            <div v-if="chartLabels.length > 0">
+              <resource-stats-line-chart
+                :chartLabels="chartLabels"
+                :chartData="resourceUsageHistory.storage"
+                :yAxisInitialMax="100"
+                :yAxisIncrementValue="10"
+                :yAxisMeasurementUnit="'%'"
+              />
             </div>
-          </template>
+          </div>
       </chart-card>
     </div>
     <div class="chart-container">
       <chart-card class="chart-card-left-little">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Nb VM actuel
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <a-statistic title="Actual VM Count" :value="93" >
+          <template #suffix>
+            <DesktopOutlined />
+            </template>
+          </a-statistic>
+        </div>
       </chart-card>
       <chart-card class="chart-card-right-big">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Historique Nb VM
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <LineChartOutlined />
+            Historique Nb VM
+          </h3>
+        </div>
       </chart-card>
     </div>
     <div class="chart-container">
       <chart-card class="chart-card-left-big">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Historique Nb VR
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <h3>
+            <LineChartOutlined />
+            Historique Nb VR
+          </h3>
+        </div>
       </chart-card>
       <chart-card class="chart-card-right-little">
-          <template #title>
-            <div class="center">
-              <h3>
-                <bank-outlined />
-                Nb VR actuel
-              </h3>
-            </div>
-          </template>
+        <div class="center">
+          <a-statistic title="Actual VR Count" :value="93" >
+          <template #suffix>
+            <DesktopOutlined />
+            </template>
+          </a-statistic>
+        </div>
       </chart-card>
     </div>
   </div>
@@ -185,35 +214,132 @@
 import Breadcrumb from '@/components/widgets/Breadcrumb'
 import ChartCard from '@/components/widgets/ChartCard'
 import ResourceLayout from '@/layouts/ResourceLayout'
+import ResourceStatsLineChart from '@/components/view/stats/ResourceStatsLineChart.vue'
+import 'chartjs-adapter-moment'
 
 export default {
   name: 'finops',
   components: {
     ChartCard,
     Breadcrumb,
-    ResourceLayout
+    ResourceLayout,
+    ResourceStatsLineChart
   },
   data () {
     return {
+      loaded: false,
+      chartLabels: [],
+      resourceUsageHistory: {
+        cpu: [],
+        cpuNumber: [],
+        ramused: [],
+        storage: []
+      }
     }
   },
-  beforeCreate () {
-  },
-  created () {
-    this.initForm()
+  mounted () {
     this.fetchData()
   },
   methods: {
-    initForm () {
-    },
     fetchData () {
-      this.routes = {}
+      this.handleStatsResponse()
+    },
+    handleStatsResponse () {
+      this.resetData()
+
+      // const chartPointRadius = this.getChartPointRadius(vm[0].stats.length)
+      const chartPointRadius = this.getChartPointRadius(60)
+
+      const blue = '#166ab7'
+      const green = '#389357'
+      const blueInRgba = 'rgba(24, 144, 255, 0.5)'
+      const greenInRgba = 'rgba(59, 198, 133, 0.65)'
+      const red = '#ff4d4f'
+      const redInRgba = 'rgb(255, 77, 79, 0.65)'
+
+      const cpuLine = { label: 'CPU', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
+      const cpuNumber = { label: 'CPU Number', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
+      const storage = { label: 'Storage', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const memUsedLinePercent = { label: 'RAM Used', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+
+      // generate data
+      const datas = []
+      const timestamp = new Date()
+      for (let i = 0; i < 60; i++) {
+        timestamp.setHours(timestamp.getHours() + i)
+
+        const data = {}
+
+        data.timestamp = timestamp.toISOString()
+        data.cpuused = Math.floor(Math.random() * 100) + '%'
+        data.cpunumber = 4
+
+        data.ramused = Math.floor(Math.random() * 100) + '%'
+        data.storage = Math.floor(Math.random() * 100) + '%'
+
+        datas.push(data)
+      }
+      console.log('datas', datas)
+      if (datas.length > 0) {
+        for (const data of datas) {
+          var ts = this.$toLocalDate(data.timestamp)
+          const currentLabel = ts.split('T')[0] + ' ' + ts.split('T')[1].split('-')[0]
+          this.chartLabels.push(currentLabel)
+
+          cpuLine.data.push({ timestamp: currentLabel, stat: data.cpuused.split('%')[0] })
+          cpuNumber.data.push({ timestamp: currentLabel, stat: data.cpunumber })
+          memUsedLinePercent.data.push({ timestamp: currentLabel, stat: data.ramused.split('%')[0] })
+          storage.data.push({ timestamp: currentLabel, stat: data.storage.split('%')[0] })
+        }
+        console.log('datas!!!')
+        this.resourceUsageHistory.cpu.push(cpuLine)
+        this.resourceUsageHistory.cpuNumber.push(cpuNumber)
+        this.resourceUsageHistory.storage.push(storage)
+        this.resourceUsageHistory.ramused.push(memUsedLinePercent)
+      }
+
+      this.loaded = true
+    },
+    resetData () {
+      console.log('reset')
+      this.chartLabels = []
+      this.resourceUsageHistory.cpu = []
+      this.resourceUsageHistory.cpuNumber = []
+      this.resourceUsageHistory.ramused = []
+      this.resourceUsageHistory.storage = []
+      console.log('resetend')
+    //   this.resourceUsageHistory.memory.percentage.free = []
+    //   this.resourceUsageHistory.memory.percentage.used = []
+    //   this.resourceUsageHistory.memory.rawData.free.inMB = []
+    //   this.resourceUsageHistory.memory.rawData.free.inGB = []
+    //   this.resourceUsageHistory.memory.rawData.used.inMB = []
+    //   this.resourceUsageHistory.memory.rawData.used.inGB = []
+    //   this.resourceUsageHistory.network.inKiB = []
+    //   this.resourceUsageHistory.network.inMiB = []
+    //   this.resourceUsageHistory.network.inGiB = []
+    //   this.resourceUsageHistory.disk.iops = []
+    //   this.resourceUsageHistory.disk.readAndWrite.inKiB = []
+    //   this.resourceUsageHistory.disk.readAndWrite.inMiB = []
+    //   this.resourceUsageHistory.disk.readAndWrite.inGiB = []
+    },
+    getChartPointRadius (numberOfDataPoints) {
+      const maxSizeLimit = 3
+      const minSizeLimit = 2
+      const minSize = 0.1 // the smallest value that allows to render the point in the chart
+      const result = (screen.width * 0.04) / numberOfDataPoints
+      if (result > maxSizeLimit) {
+        return maxSizeLimit
+      } else if (result < minSizeLimit) {
+        return minSize
+      }
+      return parseFloat(result).toFixed(2)
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
+@import '@/style/components/view/StatsTab.scss';
   .dashboard-card {
     width: 100%;
     min-height: 270px;
