@@ -242,7 +242,7 @@ export default {
       const cpuUsed = { label: 'CPU Allocated', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
       const cpuWithOverprovisionning = { label: 'CPU with OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
-      const storageUsed = { label: 'Storage Allocated', backgroundColor: blueInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const storageUsed = { label: 'Storage Allocated', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
       const storageTotal = { label: 'Storage Total', backgroundColor: blueInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
       const storageWithOverprovisionning = { label: 'Storage with OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
