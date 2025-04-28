@@ -74,7 +74,7 @@
         <div class="center">
           <h3>
             <DashboardOutlined />
-            CPU Speed
+            CPU
             <InfoCircleOutlined class="info-icon" :title="$t('label.see.more.info.cpu.usage')"/>
           </h3>
         </div>
@@ -83,40 +83,11 @@
             <resource-stats-line-chart
               :chartLabels="chartLabels"
               :chartData="resourceUsageHistory.cpu"
-              :yAxisInitialMax="100"
+              :yAxisInitialMax="2250"
               :yAxisIncrementValue="10"
-              :yAxisMeasurementUnit="'%'"
+              :yAxisMeasurementUnit="'GHz'"
             />
           </div>
-        </div>
-      </chart-card>
-      <chart-card class="chart-card-right">
-        <div class="center">
-          <h3>
-            <DashboardOutlined />
-            CPU Number
-          </h3>
-        </div>
-        <div v-if="loaded">
-          <div v-if="chartLabels.length > 0">
-            <resource-stats-line-chart
-              :chartLabels="chartLabels"
-              :chartData="resourceUsageHistory.cpuNumber"
-              :yAxisInitialMax="100"
-              :yAxisIncrementValue="10"
-              :yAxisMeasurementUnit="'%'"
-            />
-          </div>
-        </div>
-      </chart-card>
-    </div>
-    <div class="chart-container">
-      <chart-card class="chart-card-left">
-        <div class="center">
-          <h3>
-            <PieChartOutlined />
-            OS Repartition
-          </h3>
         </div>
       </chart-card>
       <chart-card class="chart-card-right">
@@ -130,25 +101,17 @@
             <div v-if="chartLabels.length > 0">
               <resource-stats-line-chart
                 :chartLabels="chartLabels"
-                :chartData="resourceUsageHistory.ramused"
-                :yAxisInitialMax="100"
-                :yAxisIncrementValue="10"
-                :yAxisMeasurementUnit="'%'"
+                :chartData="resourceUsageHistory.ram"
+                :yAxisInitialMax="6"
+                :yAxisIncrementValue="1"
+                :yAxisMeasurementUnit="'TB'"
               />
             </div>
           </div>
       </chart-card>
     </div>
     <div class="chart-container">
-      <chart-card class="chart-card-left">
-        <div class="center">
-          <h3>
-            <wifi-outlined />
-            Bandwith InOut
-          </h3>
-        </div>
-      </chart-card>
-      <chart-card class="chart-card-right">
+      <chart-card class="chart-card-left-big">
         <div class="center">
           <h3>
             <hdd-outlined />
@@ -160,12 +123,31 @@
               <resource-stats-line-chart
                 :chartLabels="chartLabels"
                 :chartData="resourceUsageHistory.storage"
-                :yAxisInitialMax="100"
-                :yAxisIncrementValue="10"
-                :yAxisMeasurementUnit="'%'"
+                :yAxisInitialMax="50"
+                :yAxisIncrementValue="1"
+                :yAxisMeasurementUnit="'TB'"
               />
             </div>
           </div>
+      </chart-card>
+      <chart-card class="chart-card-right-little">
+        <div class="center">
+          <h3>
+            <PieChartOutlined />
+            OS Repartition
+          </h3>
+        </div>
+      </chart-card>
+
+    </div>
+    <div class="chart-container">
+      <chart-card class="chart-card-left-full">
+        <div class="center">
+          <h3>
+            <wifi-outlined />
+            Bandwith InOut
+          </h3>
+        </div>
       </chart-card>
     </div>
     <div class="chart-container">
@@ -231,8 +213,7 @@ export default {
       chartLabels: [],
       resourceUsageHistory: {
         cpu: [],
-        cpuNumber: [],
-        ramused: [],
+        ram: [],
         storage: []
       }
     }
@@ -257,10 +238,17 @@ export default {
       const red = '#ff4d4f'
       const redInRgba = 'rgb(255, 77, 79, 0.65)'
 
-      const cpuLine = { label: 'CPU', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
-      const cpuNumber = { label: 'CPU Number', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
-      const storage = { label: 'Storage', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
-      const memUsedLinePercent = { label: 'RAM Used', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const cpuTotal = { label: 'CPU Total', backgroundColor: blueInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const cpuUsed = { label: 'CPU Allocated', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
+      const cpuWithoutOverprovisionning = { label: 'CPU without OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+
+      const storageUsed = { label: 'Storage Allocated', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const storageTotal = { label: 'Storage Total', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
+      const storageWithoutOverprovisionning = { label: 'Storage without OverProvisionning', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+
+      const ramUsed = { label: 'RAM Used', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
+      const ramTotal = { label: 'RAM Total', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const ramWithoutOverprovisionning = { label: 'RAM  without OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
       // generate data
       const datas = []
@@ -271,11 +259,17 @@ export default {
         const data = {}
 
         data.timestamp = timestamp.toISOString()
-        data.cpuused = Math.floor(Math.random() * 100) + '%'
-        data.cpunumber = 4
+        data.cpuTotal = 901
+        data.cpuUsed = Math.random() * (1034 - 800) + 800
+        data.cpuWithoutOverprovisionning = 2250.00
 
-        data.ramused = Math.floor(Math.random() * 100) + '%'
-        data.storage = Math.floor(Math.random() * 100) + '%'
+        data.ramTotal = 3.8
+        data.ramUsed = Math.random() * (3 - 1.5) + 2.5
+        data.ramWithoutOverprovisionning = 5
+
+        data.storageTotal = 40
+        data.storageUsed = Math.random() * (28 - 26) + 26
+        data.storageWithoutOverprovisionning = 45
 
         datas.push(data)
       }
@@ -286,16 +280,30 @@ export default {
           const currentLabel = ts.split('T')[0] + ' ' + ts.split('T')[1].split('-')[0]
           this.chartLabels.push(currentLabel)
 
-          cpuLine.data.push({ timestamp: currentLabel, stat: data.cpuused.split('%')[0] })
-          cpuNumber.data.push({ timestamp: currentLabel, stat: data.cpunumber })
-          memUsedLinePercent.data.push({ timestamp: currentLabel, stat: data.ramused.split('%')[0] })
-          storage.data.push({ timestamp: currentLabel, stat: data.storage.split('%')[0] })
+          cpuUsed.data.push({ timestamp: currentLabel, stat: data.cpuUsed })
+          cpuTotal.data.push({ timestamp: currentLabel, stat: data.cpuTotal })
+          cpuWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.cpuWithoutOverprovisionning })
+
+          ramUsed.data.push({ timestamp: currentLabel, stat: data.ramUsed })
+          ramTotal.data.push({ timestamp: currentLabel, stat: data.ramTotal })
+          ramWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.ramWithoutOverprovisionning })
+
+          storageUsed.data.push({ timestamp: currentLabel, stat: data.storageUsed })
+          storageTotal.data.push({ timestamp: currentLabel, stat: data.storageTotal })
+          storageWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.storageWithoutOverprovisionning })
         }
         console.log('datas!!!')
-        this.resourceUsageHistory.cpu.push(cpuLine)
-        this.resourceUsageHistory.cpuNumber.push(cpuNumber)
-        this.resourceUsageHistory.storage.push(storage)
-        this.resourceUsageHistory.ramused.push(memUsedLinePercent)
+        this.resourceUsageHistory.cpu.push(cpuUsed)
+        this.resourceUsageHistory.cpu.push(cpuTotal)
+        this.resourceUsageHistory.cpu.push(cpuWithoutOverprovisionning)
+
+        this.resourceUsageHistory.storage.push(storageUsed)
+        this.resourceUsageHistory.storage.push(storageTotal)
+        this.resourceUsageHistory.storage.push(storageWithoutOverprovisionning)
+
+        this.resourceUsageHistory.ram.push(ramUsed)
+        this.resourceUsageHistory.ram.push(ramTotal)
+        this.resourceUsageHistory.ram.push(ramWithoutOverprovisionning)
       }
 
       this.loaded = true
@@ -304,8 +312,7 @@ export default {
       console.log('reset')
       this.chartLabels = []
       this.resourceUsageHistory.cpu = []
-      this.resourceUsageHistory.cpuNumber = []
-      this.resourceUsageHistory.ramused = []
+      this.resourceUsageHistory.ram = []
       this.resourceUsageHistory.storage = []
       console.log('resetend')
     //   this.resourceUsageHistory.memory.percentage.free = []
@@ -370,6 +377,13 @@ export default {
     width: 20%;
     min-height: 270px;
     margin-top: 10px;
+    margin-right: 5px;
+  }
+
+  .chart-card-left-full {
+    width: 100%;
+    min-height: 270px;
+    margin-top: 10px;
     margin-right: 10px;
   }
 
@@ -389,6 +403,13 @@ export default {
 
   .chart-card-right-little {
     width: 20%;
+    min-height: 270px;
+    margin-top: 10px;
+    margin-left: 5px;
+  }
+
+  .chart-card-right-full {
+    width: 100%;
     min-height: 270px;
     margin-top: 10px;
     margin-left: 10px;
