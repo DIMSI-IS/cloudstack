@@ -236,19 +236,19 @@ export default {
       const blueInRgba = 'rgba(24, 144, 255, 0.5)'
       const greenInRgba = 'rgba(59, 198, 133, 0.65)'
       const red = '#ff4d4f'
-      const redInRgba = 'rgb(255, 77, 79, 0.65)'
+      // const redInRgba = 'rgb(255, 77, 79, 0.65)'
 
       const cpuTotal = { label: 'CPU Total', backgroundColor: blueInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
       const cpuUsed = { label: 'CPU Allocated', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
-      const cpuWithoutOverprovisionning = { label: 'CPU without OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const cpuWithOverprovisionning = { label: 'CPU with OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
-      const storageUsed = { label: 'Storage Allocated', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
-      const storageTotal = { label: 'Storage Total', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
-      const storageWithoutOverprovisionning = { label: 'Storage without OverProvisionning', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const storageUsed = { label: 'Storage Allocated', backgroundColor: blueInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const storageTotal = { label: 'Storage Total', backgroundColor: blueInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const storageWithOverprovisionning = { label: 'Storage with OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
       const ramUsed = { label: 'RAM Used', backgroundColor: blueInRgba, borderColor: blue, data: [], pointRadius: chartPointRadius }
-      const ramTotal = { label: 'RAM Total', backgroundColor: redInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
-      const ramWithoutOverprovisionning = { label: 'RAM  without OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
+      const ramTotal = { label: 'RAM Total', backgroundColor: blueInRgba, borderColor: red, data: [], pointRadius: chartPointRadius }
+      const ramWithOverprovisionning = { label: 'RAM  with OverProvisionning', backgroundColor: greenInRgba, borderColor: green, data: [], pointRadius: chartPointRadius }
 
       // generate data
       const datas = []
@@ -261,15 +261,15 @@ export default {
         data.timestamp = timestamp.toISOString()
         data.cpuTotal = 901
         data.cpuUsed = Math.random() * (1034 - 800) + 800
-        data.cpuWithoutOverprovisionning = 2250.00
+        data.cpuWithOverprovisionning = 2250.00
 
         data.ramTotal = 3.8
         data.ramUsed = Math.random() * (3 - 1.5) + 2.5
-        data.ramWithoutOverprovisionning = 5
+        data.ramWithOverprovisionning = 5
 
         data.storageTotal = 40
         data.storageUsed = Math.random() * (28 - 26) + 26
-        data.storageWithoutOverprovisionning = 45
+        data.storageWithOverprovisionning = 45
 
         datas.push(data)
       }
@@ -282,28 +282,28 @@ export default {
 
           cpuUsed.data.push({ timestamp: currentLabel, stat: data.cpuUsed })
           cpuTotal.data.push({ timestamp: currentLabel, stat: data.cpuTotal })
-          cpuWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.cpuWithoutOverprovisionning })
+          cpuWithOverprovisionning.data.push({ timestamp: currentLabel, stat: data.cpuWithOverprovisionning })
 
           ramUsed.data.push({ timestamp: currentLabel, stat: data.ramUsed })
           ramTotal.data.push({ timestamp: currentLabel, stat: data.ramTotal })
-          ramWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.ramWithoutOverprovisionning })
+          ramWithOverprovisionning.data.push({ timestamp: currentLabel, stat: data.ramWithOverprovisionning })
 
           storageUsed.data.push({ timestamp: currentLabel, stat: data.storageUsed })
           storageTotal.data.push({ timestamp: currentLabel, stat: data.storageTotal })
-          storageWithoutOverprovisionning.data.push({ timestamp: currentLabel, stat: data.storageWithoutOverprovisionning })
+          storageWithOverprovisionning.data.push({ timestamp: currentLabel, stat: data.storageWithOverprovisionning })
         }
         console.log('datas!!!')
         this.resourceUsageHistory.cpu.push(cpuUsed)
         this.resourceUsageHistory.cpu.push(cpuTotal)
-        this.resourceUsageHistory.cpu.push(cpuWithoutOverprovisionning)
+        this.resourceUsageHistory.cpu.push(cpuWithOverprovisionning)
 
         this.resourceUsageHistory.storage.push(storageUsed)
         this.resourceUsageHistory.storage.push(storageTotal)
-        this.resourceUsageHistory.storage.push(storageWithoutOverprovisionning)
+        this.resourceUsageHistory.storage.push(storageWithOverprovisionning)
 
         this.resourceUsageHistory.ram.push(ramUsed)
         this.resourceUsageHistory.ram.push(ramTotal)
-        this.resourceUsageHistory.ram.push(ramWithoutOverprovisionning)
+        this.resourceUsageHistory.ram.push(ramWithOverprovisionning)
       }
 
       this.loaded = true
