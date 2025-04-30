@@ -253,6 +253,7 @@ export default {
       // generate data
       const datas = []
       const timestamp = new Date()
+      timestamp.setMonth(1)
       for (let i = 0; i < 60; i++) {
         timestamp.setHours(timestamp.getHours() + i)
 

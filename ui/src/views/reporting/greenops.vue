@@ -16,17 +16,50 @@
 // under the License.
 
 <template>
-  <div>
-    <chart-card class="dashboard-card">
-        <template #title>
-          <div class="center">
-            <h3>
-              <bank-outlined />
-              {{ $t('label.greenops') }}
-            </h3>
-          </div>
-        </template>
-    </chart-card>
+  <a-row :gutter="12">
+      <a-col :md="24">
+      <a-card class="breadcrumb-card">
+        <a-col :md="24" style="display: flex">
+          <breadcrumb style="padding-top: 6px; padding-left: 8px" />
+          <a-button
+            style="margin-left: 12px; margin-top: 4px"
+            :loading="loading"
+            size="small"
+            shape="round"
+            @click="fetchData()" >
+            <template #icon><ReloadOutlined /></template>
+            {{ $t('label.refresh') }}
+          </a-button>
+        </a-col>
+      </a-card>
+    </a-col>
+  </a-row>
+  <div class="chart-container">
+    <div class="little-card">
+      <chart-card class="metric-card">
+        <div class="center">
+          <a-statistic title="Average Age Of Machines" :value="2.73" >
+          <template #suffix>
+            Years
+            </template>
+          </a-statistic>
+        </div>
+      </chart-card>
+      <chart-card class="metric-card">
+        <div class="center">
+          <a-statistic title="Metrics 2" :value="93" >
+          <template #suffix>
+            <DesktopOutlined />
+            </template>
+          </a-statistic>
+        </div>
+      </chart-card>
+    </div>
+    <div class="big-card">
+      <chart-card class="map">
+        <iframe width="100%" height="730px" src="https://www.openstreetmap.org/export/embed.html?bbox=-125.15625000000001%2C-30.60009387355006%2C106.87500000000001%2C76.96033358827414&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/><small><a href="https://www.openstreetmap.org/?#map=3/41.77/-9.14">Afficher une carte plus grande</a></small>
+      </chart-card>
+    </div>
   </div>
 </template>
 
@@ -76,30 +109,31 @@ export default {
     margin-bottom: 12px;
   }
 
-  .chart-card-inner {
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
+  .chart-container {
+    display: inline-flex;
+    width: 100%;
+    min-height: 500px;
   }
-  .intermediate-certificate {
-    opacity: 1;
-    transform: none;
-    transition: opacity 0.2s ease 0s, transform 0.5s ease;
-    will-change: transform;
+
+  .little-card {
+    width: 20%;
+    min-height: 500px;
+    margin-right: 10px;
   }
-  .intermediate-certificate.fadeInUp-enter-active {
-    opacity: 0;
-    transform: translateY(10px);
-    transition: none;
-  }
-  .controls {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .close-button {
-    margin-right: 20px;
-  }
-  .ant-form-item {
+
+  .metric-card {
+    width: 100%;
+    min-height: 400px;
     margin-bottom: 10px;
+  }
+
+  .big-card {
+    width: 80%;
+    min-height: 810px;
+  }
+
+  .map {
+    width: 100%;
+    min-height: 810px;
   }
 </style>
