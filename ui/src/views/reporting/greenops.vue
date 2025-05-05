@@ -46,18 +46,27 @@
         </div>
       </chart-card>
       <chart-card class="metric-card">
+        <div class="center">Commissioning dates</div>
         <div class="center">
-          <a-statistic title="Metrics 2" :value="93" >
-          <template #suffix>
-            <DesktopOutlined />
-            </template>
-          </a-statistic>
+          <span>cs-kvm1 > 11/01/2022</span>
+        </div>
+        <div class="center">
+          <span>cs-kvm2 > 09/06/2022</span>
+        </div>
+        <div class="center">
+          <span>cs-kvm3 > 04/06/2022</span>
+        </div>
+        <div class="center">
+          <span>cs-kvm4 > 14/10/2022</span>
+        </div>
+        <div class="center">
+          <span>cs-kvm5 > 12/12/2022</span>
         </div>
       </chart-card>
     </div>
     <div class="big-card">
       <chart-card class="map">
-        <iframe width="100%" height="730px" src="https://www.openstreetmap.org/export/embed.html?bbox=-125.15625000000001%2C-30.60009387355006%2C106.87500000000001%2C76.96033358827414&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/><small><a href="https://www.openstreetmap.org/?#map=3/41.77/-9.14">Afficher une carte plus grande</a></small>
+        <iframe width="100%" height="730px" src="https://www.openstreetmap.org/export/embed.html?bbox=-149.41406250000003%2C-13.411399541898431%2C76.640625%2C71.85609906532893&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/><small><a href="https://www.openstreetmap.org/?#map=3/41.57/-36.39">Afficher une carte plus grande</a></small>
       </chart-card>
     </div>
   </div>
