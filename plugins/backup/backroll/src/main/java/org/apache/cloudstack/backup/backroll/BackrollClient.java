@@ -16,16 +16,10 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.backup.Backup;
-import org.apache.cloudstack.backup.BackupOffering;
 import org.apache.cloudstack.backup.Backup.Metric;
+import org.apache.cloudstack.backup.BackupOffering;
 import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollOffering;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
@@ -45,15 +39,18 @@ import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPolicie
 import org.apache.cloudstack.backup.backroll.utils.BackrollApiException;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClientProvider;
 import org.apache.commons.lang3.StringUtils;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.joda.time.DateTime;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BackrollClient {
 
@@ -69,28 +66,33 @@ public class BackrollClient {
 
     public String startBackupJob(final String jobId) throws IOException, BackrollApiException {
         logger.info("startBackupJob : Trying to start backup for Backroll job: {}", jobId);
-        String backupJob = "";
+
         BackrollTaskRequestResponse requestResponse = httpProvider.post(String.format("/tasks/singlebackup/%s", jobId),
                 null, BackrollTaskRequestResponse.class);
+        
         logger.info("startBackupJob : BackupJob status link: {}", requestResponse.location);
-        backupJob = requestResponse.location.replace("/api/v1", "");
-        return StringUtils.isEmpty(backupJob) ? null : backupJob;
+        
+        var backupExternalId = requestResponse.location.replace("/api/v1/status/", "");
+        
+        return StringUtils.isEmpty(backupExternalId) ? null : backupExternalId;
     }
 
-    public String getBackupOfferingUrl() throws IOException, BackrollApiException {
+    public List<BackupOffering> getBackupOfferings() throws BackrollApiException, IOException {
+    	
         logger.info("Trying to get backroll backup policies url");
-        String url = "";
+        String urlTask = "";
         BackrollTaskRequestResponse requestResponse = httpProvider.get("/backup_policies",
                 BackrollTaskRequestResponse.class);
         logger.info("BackrollClient:getBackupOfferingUrl:Apres Parse:  " + requestResponse.location);
-        url = requestResponse.location.replace("/api/v1", "");
-        return StringUtils.isEmpty(url) ? null : url;
-    }
-
-    public List<BackupOffering> getBackupOfferings(String idTask) throws BackrollApiException, IOException {
+        urlTask = requestResponse.location.replace("/api/v1", "");
+        
+        if (!StringUtils.isEmpty(urlTask)){
+        	return new ArrayList<BackupOffering>();
+        }
+    	
         logger.info("Trying to list backroll backup policies");
         final List<BackupOffering> policies = new ArrayList<>();
-        BackupPoliciesResponse backupPoliciesResponse = httpProvider.waitGet(idTask, BackupPoliciesResponse.class);
+        BackupPoliciesResponse backupPoliciesResponse = httpProvider.waitGet(urlTask, BackupPoliciesResponse.class);
         logger.info(
                 "BackrollClient:getBackupOfferings:Apres Parse:  " + backupPoliciesResponse.backupPolicies.get(0).name);
         for (final BackrollBackupPolicyResponse policy : backupPoliciesResponse.backupPolicies) {

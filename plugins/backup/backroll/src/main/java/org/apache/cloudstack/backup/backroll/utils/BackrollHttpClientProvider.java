@@ -16,17 +16,9 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll.utils;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509TrustManager;
-
+import com.cloud.utils.exception.CloudRuntimeException;
+import com.cloud.utils.nio.TrustAllManager;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.api.ApiErrorCode;
 import org.apache.cloudstack.api.ServerApiException;
 import org.apache.cloudstack.backup.backroll.BackrollClient;
@@ -55,9 +47,15 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.cloud.utils.exception.CloudRuntimeException;
-import com.cloud.utils.nio.TrustAllManager;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.concurrent.TimeUnit;
 
 public class BackrollHttpClientProvider {
     private URI apiURI;;

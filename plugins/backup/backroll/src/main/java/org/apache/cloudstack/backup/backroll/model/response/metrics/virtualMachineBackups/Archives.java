@@ -16,9 +16,9 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll.model.response.metrics.virtualMachineBackups;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
 
 public class Archives {
     @JsonProperty("archives")

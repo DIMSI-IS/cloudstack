@@ -16,20 +16,12 @@
 // under the License.
 package org.apache.cloudstack.backup;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import javax.inject.Inject;
-
-
+import com.cloud.utils.Pair;
+import com.cloud.utils.component.AdapterBase;
+import com.cloud.utils.exception.CloudRuntimeException;
+import com.cloud.vm.VMInstanceVO;
+import com.cloud.vm.VirtualMachine;
+import com.cloud.vm.dao.VMInstanceDao;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.Backup.RestorePoint;
 import org.apache.cloudstack.backup.backroll.BackrollClient;
@@ -40,19 +32,22 @@ import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClientProvider;
 import org.apache.cloudstack.backup.dao.BackupDao;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.ParseException;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 
-import com.cloud.utils.Pair;
-import com.cloud.utils.component.AdapterBase;
-import com.cloud.utils.exception.CloudRuntimeException;
-import com.cloud.vm.VMInstanceVO;
-import com.cloud.vm.VirtualMachine;
-import com.cloud.vm.dao.VMInstanceDao;
+import javax.inject.Inject;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class BackrollBackupProvider extends AdapterBase implements BackupProvider, Configurable {
 
@@ -88,6 +83,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     }
 
     public BackrollBackupProvider(){}
+    
+    private Map<VirtualMachine, Backup.Metric> backupFilesMetricsMap = new HashMap<>();
 
     @Override
     public String getName() {
@@ -104,24 +101,14 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
         logger.debug("Listing backup policies on backroll B&R Plugin");
         BackrollClient client = getClient(zoneId);
         try{
-            String urlToRequest = client.getBackupOfferingUrl();
-            logger.info("BackrollProvider: urlToRequest: " + urlToRequest);
-            if (!StringUtils.isEmpty(urlToRequest)){
-                List<BackupOffering> results = new ArrayList<BackupOffering>();
-                // return client.getBackupOfferings(urlToRequest);
-                results = client.getBackupOfferings(urlToRequest);
-                if(results.size()>0) {
-                    logger.info("BackrollProvider: results > 0");
-                } else {
-                    logger.info("BackrollProvider: results <= 0");
-                }
-                return results;
-            }
+            var results = client.getBackupOfferings();
+
+            logger.info("BackrollProvider: results " + (results.size() > 0 ? "> 0" : "<= 0"));
+            return results;
         } catch (ParseException | BackrollApiException | IOException e) {
             logger.info("BackrollProvider: catch erreur: {}", e);
             throw new CloudRuntimeException("Failed to load backup offerings");
         }
-        return new ArrayList<BackupOffering>();
     }
 
     @Override
@@ -134,7 +121,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     public boolean assignVMToBackupOffering(VirtualMachine vm, BackupOffering backupOffering) {
         logger.info("Creating VM backup for VM {} from backup offering {}", vm.getInstanceName(), backupOffering.getName());
         if(vm instanceof VMInstanceVO) {
-            ((VMInstanceVO) vm).setBackupExternalId(backupOffering.getUuid());
+        	((VMInstanceVO) vm).setBackupExternalId(backupOffering.getUuid());
+            
             return true;
         }
         return false;
@@ -143,17 +131,15 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     @Override
     public boolean restoreVMFromBackup(VirtualMachine vm, Backup backup) {
         logger.debug("Restoring vm {} from backup {} on the backroll Backup Provider", vm.getUuid(), backup.getUuid());
-        boolean isSuccess;
+
         try {
-            isSuccess = getClient(vm.getDataCenterId()).restoreVMFromBackup(vm.getUuid(), getBackupName(backup));
+        	return getClient(vm.getDataCenterId()).restoreVMFromBackup(vm.getUuid(), getBackupName(backup));
         } catch (ParseException | BackrollApiException | IOException e) {
             throw new CloudRuntimeException("Failed to restore VM from Backup");
         }
-        return isSuccess;
     }
 
-    @Override
-    public Map<VirtualMachine, Backup.Metric> getBackupMetrics(Long zoneId, List<VirtualMachine> vms) {
+    private Map<VirtualMachine, Backup.Metric> getBackupMetrics(Long zoneId, List<VirtualMachine> vms) {
         final Map<VirtualMachine, Backup.Metric> metrics = new HashMap<>();
         if (CollectionUtils.isEmpty(vms)) {
             logger.warn("Unable to get VM Backup Metrics because the list of VMs is empty.");
@@ -288,35 +274,38 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     }
 
     @Override
-    public Pair<Boolean, Backup> takeBackup(VirtualMachine vm) {
+    public Pair<Boolean, Backup> takeBackup(VirtualMachine vm, Boolean quiesceVM) {
         logger.info("Starting backup for VM ID {} on backroll provider", vm.getUuid());
         final BackrollClient client = getClient(vm.getDataCenterId());
 
         try {
-            String urlToRequest = client.startBackupJob(vm.getUuid());
-            logger.info("BackrollProvider: urlToRequest: " + urlToRequest);
-            String backupJob = urlToRequest.replace("/status/", "");
-            if (!StringUtils.isEmpty(backupJob)) {
-                BackupVO backup = new BackupVO();
-                backup.setVmId(vm.getId());
-                backup.setExternalId(backupJob);
-                backup.setType("INCREMENTAL");
-                backup.setDate(new DateTime().toDate());
-                backup.setSize(0L);
-                backup.setProtectedSize(0L);
-                backup.setStatus(Backup.Status.BackingUp);
-                backup.setBackupOfferingId(vm.getBackupOfferingId());
-                backup.setAccountId(vm.getAccountId());
-                backup.setDomainId(vm.getDomainId());
-                backup.setZoneId(vm.getDataCenterId());
-                Boolean result = backupDao.persist(backup) != null;
-                return new Pair<Boolean,Backup>(result, backup);
+            String backupExternalId = client.startBackupJob(vm.getUuid());
+            
+            if (StringUtils.isEmpty(backupExternalId)) {
+            	return new Pair<>(false, null);
             }
+            
+            var backup = new BackupVO();
+            backup.setVmId(vm.getId());
+            backup.setExternalId(backupExternalId);
+            backup.setType("INCREMENTAL");
+            backup.setDate(new DateTime().toDate());
+            backup.setSize(0L);
+            backup.setProtectedSize(0L);
+            backup.setStatus(Backup.Status.BackingUp);
+            backup.setBackupOfferingId(vm.getBackupOfferingId());
+            backup.setAccountId(vm.getAccountId());
+            backup.setDomainId(vm.getDomainId());
+            backup.setZoneId(vm.getDataCenterId());
+            
+            Boolean result = backupDao.persist(backup) != null;
+            
+            return new Pair<Boolean,Backup>(result, backup);
+
         } catch (ParseException | BackrollApiException | IOException e) {
             logger.debug(e.getMessage());
             throw new CloudRuntimeException("Failed to take backup");
         }
-        return new Pair<Boolean,Backup>(false, null);
     }
 
     @Override
@@ -364,13 +353,12 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
         backupToUpdate.setStatus(Backup.Status.Removed);
         if (backupDao.persist(backupToUpdate) != null) {
             logger.debug("BACKROLL: Backroll backup {} deleted in database.", backup.getUuid());
-            VMInstanceVO vm = vmInstanceDao.findByIdIncludingRemoved(backup.getVmId());
             return true;
         }
         return false;
     }
 
-    protected BackrollClient getClient(final Long zoneId) {
+    private BackrollClient getClient(final Long zoneId) {
         logger.debug("Backroll Provider GetClient with zone id {}", zoneId);
         try {
             if (backrollClient == null) {
@@ -397,8 +385,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     }
 
     @Override
-    public Pair<Boolean, String> restoreBackedUpVolume(Backup backup, String volumeUuid, String hostIp, String dataStoreUuid, Pair<String, VirtualMachine.State> vmNameAndState) {
-        logger.debug("Restoring volume {} from backup {} on the Backroll Backup Provider", volumeUuid, backup.getUuid());
+    public Pair<Boolean, String> restoreBackedUpVolume(Backup backup, Backup.VolumeInfo backupVolumeInfo, String hostIp, String dataStoreUuid, Pair<String, VirtualMachine.State> vmNameAndState) {
+        logger.debug("Restoring volume {} from backup {} on the Backroll Backup Provider", backupVolumeInfo.getUuid(), backup.getUuid());
         throw new CloudRuntimeException("Backroll plugin does not support this feature");
     }
 
@@ -414,7 +402,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     }
 
     @Override
-    public Backup createNewBackupEntryForRestorePoint(RestorePoint restorePoint, VirtualMachine vm, Metric metric) {
+    public Backup createNewBackupEntryForRestorePoint(RestorePoint restorePoint, VirtualMachine vm) {
         final BackrollClient client = getClient(vm.getDataCenterId());
         BackupVO backupToInsert = new BackupVO();
         backupToInsert.setVmId(vm.getId());
@@ -439,5 +427,38 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
         backupDao.persist(backupToInsert);
         return backupToInsert;
+    }
+
+    @Override
+    public Boolean crossZoneInstanceCreationEnabled(BackupOffering backupOffering) {
+        return false;
+    }
+
+    @Override
+    public Pair<Boolean, String> restoreBackupToVM(VirtualMachine vm, Backup backup, String hostIp, String dataStoreUuid) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public void syncBackupMetrics(Long zoneId) {
+    	final List<VMInstanceVO> vms = vmInstanceDao.listByZoneId(zoneId);
+    	
+    	final var castedVMList = vms.stream().map((v) -> (VirtualMachine)v).collect(Collectors.toList());
+    	
+    	backupFilesMetricsMap = getBackupMetrics(zoneId, castedVMList);
+    }
+
+    @Override
+    public boolean supportsInstanceFromBackup() {
+        return true;
+    }
+
+    @Override
+    public Pair<Long, Long> getBackupStorageStats(Long zoneId) {
+        return new Pair<>(0L, 0L);
+    }
+
+    @Override
+    public void syncBackupStorageStats(Long zoneId) {
     }
 }

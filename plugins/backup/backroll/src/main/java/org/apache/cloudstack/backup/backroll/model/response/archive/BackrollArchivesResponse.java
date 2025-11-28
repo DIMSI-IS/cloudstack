@@ -16,10 +16,10 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll.model.response.archive;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
 
 public class BackrollArchivesResponse {
     @JsonProperty("archives")

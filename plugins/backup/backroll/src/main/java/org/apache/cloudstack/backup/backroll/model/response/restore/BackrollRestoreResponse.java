@@ -16,10 +16,9 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll.model.response.restore;
 
-import org.apache.cloudstack.backup.backroll.model.response.BackrollAsyncResponse;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cloudstack.backup.backroll.model.response.BackrollAsyncResponse;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BackrollRestoreResponse extends BackrollAsyncResponse {

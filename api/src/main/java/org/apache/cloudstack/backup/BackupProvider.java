@@ -101,7 +101,7 @@ public interface BackupProvider {
 
     /**
      * Syncs backup metrics (backup size, protected size) from the plugin and stores it within the provider
-     * @param zoneId the zone for which to return metrics
+     * @param zoneId the zone for which to synchronize metrics
      */
     void syncBackupMetrics(Long zoneId);
 
@@ -109,7 +109,7 @@ public interface BackupProvider {
      * Returns a list of Backup.RestorePoint
      * @param vm the machine to get the restore points for
      */
-    List<Backup.RestorePoint> listRestorePoints(VirtualMachine vm);
+	List<Backup.RestorePoint> listRestorePoints(VirtualMachine vm);
 
     /**
      * Creates and returns an entry in the backups table by getting the information from restorePoint and vm.

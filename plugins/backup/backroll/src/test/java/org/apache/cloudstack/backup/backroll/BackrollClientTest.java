@@ -16,17 +16,8 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.BackupOffering;
@@ -55,11 +46,17 @@ import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class BackrollClientTest {
     private BackrollClient client;
@@ -209,20 +206,10 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void getBackupOfferingUrl_Test() throws IOException, BackrollApiException {
-        BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
-        backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock)
-                .get(Mockito.matches(".*/backup_policies.*"), Mockito.any());
-
-        String response = client.getBackupOfferingUrl();
-
-        assertEquals("/status/f32092e4-3e8a-461b-8733-ed93e23fa782", response);
-    }
-
-    @Test
     public void getBackupOfferings_Test() throws BackrollApiException, IOException {
 
+
+    	
         BackrollBackupPolicyResponse policy1 = new BackrollBackupPolicyResponse();
         policy1.name = "User-Policy-1";
         policy1.retentionDay = 6;
@@ -251,10 +238,15 @@ public class BackrollClientTest {
         BackupPoliciesResponse backupPoliciesResponseMock = new BackupPoliciesResponse();
         backupPoliciesResponseMock.backupPolicies = Arrays.asList(policy1, policy2);
 
+        BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
+        backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock)
+                .get(Mockito.matches(".*/backup_policies.*"), Mockito.any());
+        
         doReturn(backupPoliciesResponseMock).when(backrollHttpClientProviderMock)
                 .waitGet(Mockito.matches("/status/f32092e4-3e8a-461b-8733-ed93e23fa782"), Mockito.any());
 
-        List<BackupOffering> response = client.getBackupOfferings("/status/f32092e4-3e8a-461b-8733-ed93e23fa782");
+        List<BackupOffering> response = client.getBackupOfferings();
 
         assertEquals(response.size(), 2);
 
