@@ -14,17 +14,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package com.cloud.upgrade.dao;
 
-public class Upgrade42200to42300 extends DbUpgradeAbstractImpl implements DbUpgrade, DbUpgradeSystemVmTemplate {
+package org.apache.cloudstack.mom.webhook.dao;
 
-    @Override
-    public String[] getUpgradableVersionRange() {
-        return new String[]{"4.22.0.0", "4.23.0.0"};
-    }
+import java.util.List;
 
-    @Override
-    public String getUpgradedVersion() {
-        return "4.23.0.0";
-    }
+import org.apache.cloudstack.mom.webhook.vo.WebhookFilterVO;
+
+import com.cloud.utils.Pair;
+import com.cloud.utils.db.GenericDao;
+
+public interface WebhookFilterDao extends GenericDao<WebhookFilterVO, Long> {
+    Pair<List<WebhookFilterVO>, Integer> searchBy(Long id, Long webhookId, Long startIndex, Long pageSize);
+    List<WebhookFilterVO> listByWebhook(Long webhookId);
+    int delete(Long id, Long webhookId);
 }
