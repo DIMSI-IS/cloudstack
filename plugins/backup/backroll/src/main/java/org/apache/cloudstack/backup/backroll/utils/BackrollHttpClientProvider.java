@@ -58,6 +58,9 @@ import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
 public class BackrollHttpClientProvider {
+    private static final String AUTH_LOGIN = "/auth/cloudstack/login";
+    private static final String AUTH_TEST = "/auth/cloudstack/test";
+
     private URI apiURI;;
     private String backrollToken = null;
     private String appname = null;
@@ -315,12 +318,13 @@ public class BackrollHttpClientProvider {
         boolean result = false;
 
         if(StringUtils.isEmpty(backrollToken)) {
-            logger.debug("Backroll Tocken empty : " + backrollToken);
+            logger.debug("Backroll Token empty : " + backrollToken);
             return result;
         }
 
         try (CloseableHttpClient httpClient = createHttpClient()) {
-            final HttpPost request = new HttpPost(apiURI.toString() + "/auth");
+            final HttpPost request = new HttpPost(apiURI.toString() + AUTH_TEST);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
             CloseableHttpResponse httpResponse = httpClient.execute(request);
             logger.debug("Backroll Auth response : " + EntityUtils.toString(httpResponse.getEntity()));
             logger.debug("Backroll Auth response status : " + httpResponse.getStatusLine().getStatusCode());
@@ -352,7 +356,7 @@ public class BackrollHttpClientProvider {
         CloseableHttpClient httpClient = createHttpClient();
         CloseableHttpResponse httpResponse = null;
 
-        final HttpPost request = new HttpPost(apiURI.toString() + "/login");
+        final HttpPost request = new HttpPost(apiURI.toString() + AUTH_LOGIN);
         request.addHeader("content-type", "application/json");
 
         JSONObject jsonBody = new JSONObject();
