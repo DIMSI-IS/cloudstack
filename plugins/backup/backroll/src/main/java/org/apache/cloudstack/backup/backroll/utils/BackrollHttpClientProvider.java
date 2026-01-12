@@ -62,7 +62,7 @@ public class BackrollHttpClientProvider {
     private static final String AUTH_TEST = "/auth/cloudstack/test";
 
     private URI apiURI;;
-    private String backrollToken = null;
+    private String token = null;
     private String appname = null;
     private String password = null;
     private RequestConfig config = null;
@@ -161,6 +161,25 @@ public class BackrollHttpClientProvider {
         }
     }
 
+    protected boolean isAuthenticated() throws BackrollApiException, IOException {
+        if (StringUtils.isBlank(token)) {
+            logger.debug("Token is blank “{}”.", token);
+            return false;
+        }
+
+        try (CloseableHttpClient httpClient = createHttpClient()) {
+            final HttpGet request = new HttpGet(apiURI.toString() + AUTH_TEST);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            CloseableHttpResponse httpResponse = httpClient.execute(request);
+            okBody(httpResponse);
+            logger.debug("Client is authenticated.");
+            return true;
+        } catch (NotOkBodyException exception) {
+            logger.debug("Authentication test failed.");
+            return false;
+        }
+    }
+
     public <T> T post(final String path, final JSONObject json, Class<T> classOfT)
             throws BackrollApiException, IOException {
 
@@ -182,7 +201,7 @@ public class BackrollHttpClientProvider {
                 request.setEntity(params);
             }
 
-            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
             request.setHeader("Content-type", "application/json");
 
             final CloseableHttpResponse response = httpClient.execute(request);
@@ -213,7 +232,7 @@ public class BackrollHttpClientProvider {
             logger.debug("Backroll URL {}", url);
 
             HttpGet request = new HttpGet(url);
-            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
             request.setHeader("Content-type", "application/json");
             CloseableHttpResponse response = httpClient.execute(request);
             logger.debug("Response received in GET request is: {} for URL: {}.", response.toString(), url);
@@ -239,7 +258,7 @@ public class BackrollHttpClientProvider {
             logger.debug("Backroll URL {}", url);
 
             HttpGet request = new HttpGet(url);
-            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
             request.setHeader("Content-type", "application/json");
             CloseableHttpResponse response = httpClient.execute(request);
             logger.debug("Response received in GET request is: {} for URL: {}.", response.toString(), url);
@@ -262,7 +281,7 @@ public class BackrollHttpClientProvider {
 
             String url = apiURI.toString() + path;
             final HttpDelete request = new HttpDelete(url);
-            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
+            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
             request.setHeader("Content-type", "application/json");
             final CloseableHttpResponse response = httpClient.execute(request);
             logger.debug("Response received in GET request is: {} for URL: {}.", response.toString(), url);
@@ -328,30 +347,6 @@ public class BackrollHttpClientProvider {
         return null;
     }
 
-    protected boolean isAuthenticated() throws BackrollApiException, IOException {
-        boolean result = false;
-
-        if (StringUtils.isEmpty(backrollToken)) {
-            logger.debug("Backroll Token empty : " + backrollToken);
-            return result;
-        }
-
-        try (CloseableHttpClient httpClient = createHttpClient()) {
-            final HttpGet request = new HttpGet(apiURI.toString() + AUTH_TEST);
-            request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
-            CloseableHttpResponse httpResponse = httpClient.execute(request);
-            String response = okBody(httpResponse);
-            logger.debug("Backroll Auth response 2 : " + response);
-            logger.debug("Backroll Auth ok");
-            result = true;
-        } catch (NotOkBodyException e) {
-            logger.error(e);
-            e.printStackTrace();
-            result = false;
-        }
-        return result;
-    }
-
     private void closeConnection(CloseableHttpResponse closeableHttpResponse) throws IOException {
         closeableHttpResponse.close();
     }
@@ -387,8 +382,8 @@ public class BackrollHttpClientProvider {
                 logger.info("BACKROLL:     " + response);
                 LoginApiResponse loginResponse = objectMapper.readValue(response, LoginApiResponse.class);
                 logger.info("ok");
-                backrollToken = loginResponse.accessToken;
-                logger.debug("Backroll client -  Token : {}", backrollToken);
+                token = loginResponse.accessToken;
+                logger.debug("Backroll client -  Token : {}", token);
 
                 if (StringUtils.isEmpty(loginResponse.accessToken)) {
                     throw new CloudRuntimeException("Backroll token is not available to perform API requests");
