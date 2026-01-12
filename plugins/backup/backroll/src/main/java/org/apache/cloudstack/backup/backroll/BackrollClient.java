@@ -86,7 +86,7 @@ public class BackrollClient {
         logger.info("BackrollClient:getBackupOfferingUrl:Apres Parse:  " + requestResponse.location);
         urlTask = requestResponse.location.replace("/api/v1", "");
         
-        if (!StringUtils.isEmpty(urlTask)){
+        if (StringUtils.isEmpty(urlTask)){
         	return new ArrayList<BackupOffering>();
         }
     	
