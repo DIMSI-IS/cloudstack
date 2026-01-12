@@ -323,7 +323,7 @@ public class BackrollHttpClientProvider {
         }
 
         try (CloseableHttpClient httpClient = createHttpClient()) {
-            final HttpPost request = new HttpPost(apiURI.toString() + AUTH_TEST);
+            final HttpGet request = new HttpGet(apiURI.toString() + AUTH_TEST);
             request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
             CloseableHttpResponse httpResponse = httpClient.execute(request);
             logger.debug("Backroll Auth response : " + EntityUtils.toString(httpResponse.getEntity()));
