@@ -347,10 +347,6 @@ public class BackrollHttpClientProvider {
         return null;
     }
 
-    private void closeConnection(CloseableHttpResponse closeableHttpResponse) throws IOException {
-        closeableHttpResponse.close();
-    }
-
     public void loginIfAuthenticationFailed() throws BackrollApiException, IOException {
         if (!isAuthenticated()) {
             login();
@@ -361,7 +357,6 @@ public class BackrollHttpClientProvider {
         logger.debug("Backroll client -  start login");
 
         CloseableHttpClient httpClient = createHttpClient();
-        CloseableHttpResponse httpResponse = null;
 
         final HttpPost request = new HttpPost(apiURI.toString() + AUTH_LOGIN);
         request.addHeader("content-type", "application/json");
@@ -375,7 +370,7 @@ public class BackrollHttpClientProvider {
             params = new StringEntity(jsonBody.toString());
             request.setEntity(params);
 
-            httpResponse = httpClient.execute(request);
+            CloseableHttpResponse httpResponse = httpClient.execute(request);
             try {
                 String response = okBody(httpResponse);
                 ObjectMapper objectMapper = new ObjectMapper();
@@ -405,8 +400,6 @@ public class BackrollHttpClientProvider {
             e.printStackTrace();
             logger.error(e);
             throw new CloudRuntimeException("Failed to authenticate Backroll API service due to:" + e.getMessage());
-        } finally {
-            closeConnection(httpResponse);
         }
         logger.debug("Backroll client -  end login");
     }
