@@ -167,7 +167,7 @@ public class BackrollHttpClientProviderTest {
 
     @Test
     public void NotOkBodyException_Test(){
-        BackrollHttpClientProvider.NotOkBodyException exception = backupHttpClientProvider.new NotOkBodyException();
+        BackrollHttpClientProvider.NotOkBodyException exception = backupHttpClientProvider.new NotOkBodyException(404);
         assertNotNull(exception);
     }
 

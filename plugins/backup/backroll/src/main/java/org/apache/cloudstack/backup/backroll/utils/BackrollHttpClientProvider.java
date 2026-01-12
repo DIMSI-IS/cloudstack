@@ -70,35 +70,38 @@ public class BackrollHttpClientProvider {
 
     private Logger logger = LogManager.getLogger(BackrollClient.class);
 
-    public static BackrollHttpClientProvider createProvider(final BackrollHttpClientProvider backrollHttpClientProvider, final String url, final String appname, final String password,
-        final boolean validateCertificate, final int timeout,
-        final int restoreTimeout) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
-        //BackrollHttpClientProvider backrollHttpClientProvider = new BackrollHttpClientProvider();
+    public static BackrollHttpClientProvider createProvider(final BackrollHttpClientProvider backrollHttpClientProvider,
+            final String url, final String appname, final String password,
+            final boolean validateCertificate, final int timeout,
+            final int restoreTimeout) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
+        // BackrollHttpClientProvider backrollHttpClientProvider = new
+        // BackrollHttpClientProvider();
         backrollHttpClientProvider.apiURI = new URI(url);
         backrollHttpClientProvider.appname = appname;
         backrollHttpClientProvider.password = password;
         backrollHttpClientProvider.validateCertificate = validateCertificate;
 
         backrollHttpClientProvider.config = RequestConfig.custom()
-            .setConnectTimeout(timeout * 1000)
-            .setConnectionRequestTimeout(timeout * 1000)
-            .setSocketTimeout(timeout * 1000)
-            .build();
+                .setConnectTimeout(timeout * 1000)
+                .setConnectionRequestTimeout(timeout * 1000)
+                .setSocketTimeout(timeout * 1000)
+                .build();
 
         return backrollHttpClientProvider;
     }
 
     protected CloseableHttpClient createHttpClient() throws BackrollApiException {
-        if(!validateCertificate) {
+        if (!validateCertificate) {
             SSLContext sslContext;
             try {
                 sslContext = SSLUtils.getSSLContext();
                 sslContext.init(null, new X509TrustManager[] { new TrustAllManager() }, new SecureRandom());
-                final SSLConnectionSocketFactory factory = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+                final SSLConnectionSocketFactory factory = new SSLConnectionSocketFactory(sslContext,
+                        NoopHostnameVerifier.INSTANCE);
                 return HttpClientBuilder.create()
-                    .setDefaultRequestConfig(config)
-                    .setSSLSocketFactory(factory)
-                    .build();
+                        .setDefaultRequestConfig(config)
+                        .setSSLSocketFactory(factory)
+                        .build();
             } catch (NoSuchAlgorithmException | KeyManagementException e) {
                 logger.error(e);
                 e.printStackTrace();
@@ -106,12 +109,60 @@ public class BackrollHttpClientProvider {
             }
         } else {
             return HttpClientBuilder.create()
-                .setDefaultRequestConfig(config)
-                .build();
+                    .setDefaultRequestConfig(config)
+                    .build();
         }
     }
 
-    public <T> T post(final String path, final JSONObject json, Class<T> classOfT) throws BackrollApiException, IOException {
+    private String consumeResponse(final CloseableHttpResponse response) throws ParseException, IOException {
+        try {
+            final HttpEntity bodyEntity = response.getEntity();
+            logger.debug("Response body entity is {}.", bodyEntity);
+            if (bodyEntity == null) {
+                return "";
+            }
+
+            final String bodyContent = EntityUtils.toString(bodyEntity);
+            logger.debug("Response body content is {}.", bodyContent);
+            EntityUtils.consumeQuietly(bodyEntity);
+
+            return bodyContent;
+        } finally {
+            response.close();
+        }
+    }
+
+    public class NotOkBodyException extends Exception {
+        private int statusCode;
+
+        public NotOkBodyException(final int statusCode) {
+            super();
+            this.statusCode = statusCode;
+        }
+
+        public int getStatusCode() {
+            return statusCode;
+        }
+    }
+
+    public String okBody(final CloseableHttpResponse response) throws NotOkBodyException, ParseException, IOException {
+        final int statusCode = response.getStatusLine().getStatusCode();
+        logger.debug("Response status code is {}.", statusCode);
+
+        // Consume the response anyway.
+        final String bodyContent = consumeResponse(response);
+
+        switch (statusCode) {
+            case HttpStatus.SC_OK:
+            case HttpStatus.SC_ACCEPTED:
+                return bodyContent;
+            default:
+                throw new NotOkBodyException(statusCode);
+        }
+    }
+
+    public <T> T post(final String path, final JSONObject json, Class<T> classOfT)
+            throws BackrollApiException, IOException {
 
         loginIfAuthenticationFailed();
 
@@ -136,12 +187,13 @@ public class BackrollHttpClientProvider {
 
             final CloseableHttpResponse response = httpClient.execute(request);
 
-            logger.debug("Response received in POST request with body {} is: {} for URL {}.", xml, response.toString(), url);
+            logger.debug("Response received in POST request with body {} is: {} for URL {}.", xml, response.toString(),
+                    url);
 
             String result = okBody(response);
 
             T requestResponse = new ObjectMapper().readValue(result, classOfT);
-            //response.close();
+            // response.close();
 
             return requestResponse;
         } catch (ParseException | NotOkBodyException e) {
@@ -151,7 +203,7 @@ public class BackrollHttpClientProvider {
         }
     }
 
-    public <T> T get(String path, Class<T> classOfT) throws IOException, BackrollApiException{
+    public <T> T get(String path, Class<T> classOfT) throws IOException, BackrollApiException {
         logger.debug("Backroll Get Auth ");
         loginIfAuthenticationFailed();
         logger.debug("Backroll Get Auth ok");
@@ -163,12 +215,11 @@ public class BackrollHttpClientProvider {
             HttpGet request = new HttpGet(url);
             request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
             request.setHeader("Content-type", "application/json");
-            CloseableHttpResponse  response = httpClient.execute(request);
+            CloseableHttpResponse response = httpClient.execute(request);
             logger.debug("Response received in GET request is: {} for URL: {}.", response.toString(), url);
 
             String result = okBody(response);
             T requestResponse = new ObjectMapper().readValue(result, classOfT);
-            //response.close();
 
             return requestResponse;
         } catch (NotOkBodyException e) {
@@ -178,7 +229,7 @@ public class BackrollHttpClientProvider {
         }
     }
 
-    public String getWithoutParseResponse(String path) throws IOException, BackrollApiException{
+    public String getWithoutParseResponse(String path) throws IOException, BackrollApiException {
         logger.debug("Backroll Get Auth ");
         loginIfAuthenticationFailed();
         logger.debug("Backroll Get Auth ok");
@@ -190,11 +241,10 @@ public class BackrollHttpClientProvider {
             HttpGet request = new HttpGet(url);
             request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
             request.setHeader("Content-type", "application/json");
-            CloseableHttpResponse  response = httpClient.execute(request);
+            CloseableHttpResponse response = httpClient.execute(request);
             logger.debug("Response received in GET request is: {} for URL: {}.", response.toString(), url);
 
             String result = okBody(response);
-            //response.close();
 
             return result;
         } catch (NotOkBodyException e) {
@@ -219,7 +269,6 @@ public class BackrollHttpClientProvider {
 
             String result = okBody(response);
             T requestResponse = new ObjectMapper().readValue(result, classOfT);
-            //response.close();
 
             return requestResponse;
         } catch (NotOkBodyException e) {
@@ -229,48 +278,13 @@ public class BackrollHttpClientProvider {
         }
     }
 
-    public class NotOkBodyException extends Exception {
-        public NotOkBodyException() {
-            super();
-        }
-    }
-
-    public String okBody(final CloseableHttpResponse response) throws NotOkBodyException {
-        String result = "";
-        switch (response.getStatusLine().getStatusCode()) {
-            case HttpStatus.SC_OK:
-            case HttpStatus.SC_ACCEPTED:
-                HttpEntity bodyEntity = response.getEntity();
-                try {
-                    logger.debug("bodyentity : {}", bodyEntity);
-                    result = EntityUtils.toString(bodyEntity);
-                    logger.debug("bodyentity : result {}", result);
-                    EntityUtils.consumeQuietly(bodyEntity);
-                    return result;
-                } catch (ParseException | IOException e) {
-                    e.printStackTrace();
-                    throw new NotOkBodyException();
-                } finally {
-                    EntityUtils.consumeQuietly(bodyEntity);
-                }
-            default:
-                try {
-                    closeConnection(response);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                throw new NotOkBodyException();
-        }
-    }
-
-    public  <T> T waitGet(String url, Class<T> classOfT)  throws IOException, BackrollApiException {
+    public <T> T waitGet(String url, Class<T> classOfT) throws IOException, BackrollApiException {
         // int threshold = 30; // 5 minutes
         int maxAttempts = 12; // 2 minutes
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             String body = getWithoutParseResponse(url);
-            if(!StringUtils.isEmpty(body)){
+            if (!StringUtils.isEmpty(body)) {
                 if (!body.contains(TaskState.PENDING)) {
                     logger.debug("METRICS waitGetWithoutParseResponse : result {}", body);
                     T result = new ObjectMapper().readValue(body, classOfT);
@@ -317,7 +331,7 @@ public class BackrollHttpClientProvider {
     protected boolean isAuthenticated() throws BackrollApiException, IOException {
         boolean result = false;
 
-        if(StringUtils.isEmpty(backrollToken)) {
+        if (StringUtils.isEmpty(backrollToken)) {
             logger.debug("Backroll Token empty : " + backrollToken);
             return result;
         }
@@ -326,13 +340,11 @@ public class BackrollHttpClientProvider {
             final HttpGet request = new HttpGet(apiURI.toString() + AUTH_TEST);
             request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
             CloseableHttpResponse httpResponse = httpClient.execute(request);
-            logger.debug("Backroll Auth response : " + EntityUtils.toString(httpResponse.getEntity()));
-            logger.debug("Backroll Auth response status : " + httpResponse.getStatusLine().getStatusCode());
             String response = okBody(httpResponse);
             logger.debug("Backroll Auth response 2 : " + response);
             logger.debug("Backroll Auth ok");
             result = true;
-        }catch (NotOkBodyException e) {
+        } catch (NotOkBodyException e) {
             logger.error(e);
             e.printStackTrace();
             result = false;
@@ -384,9 +396,11 @@ public class BackrollHttpClientProvider {
             } catch (final NotOkBodyException e) {
                 logger.error(e);
                 if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_CREATED) {
-                    throw new CloudRuntimeException("Failed to create and authenticate Backroll client, please check the settings.");
+                    throw new CloudRuntimeException(
+                            "Failed to create and authenticate Backroll client, please check the settings.");
                 } else {
-                    throw new ServerApiException(ApiErrorCode.UNAUTHORIZED, "Backroll API call unauthorized, please ask your administrator to fix integration issues.");
+                    throw new ServerApiException(ApiErrorCode.UNAUTHORIZED,
+                            "Backroll API call unauthorized, please ask your administrator to fix integration issues.");
                 }
             }
         } catch (final IOException e) {
@@ -396,8 +410,7 @@ public class BackrollHttpClientProvider {
             e.printStackTrace();
             logger.error(e);
             throw new CloudRuntimeException("Failed to authenticate Backroll API service due to:" + e.getMessage());
-        }
-        finally {
+        } finally {
             closeConnection(httpResponse);
         }
         logger.debug("Backroll client -  end login");
