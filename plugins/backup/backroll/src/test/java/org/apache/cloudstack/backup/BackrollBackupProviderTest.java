@@ -273,7 +273,7 @@ public class BackrollBackupProviderTest {
         /*
          * Backup result =
          * backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm, metric);
-         * 
+         *
          * assertNotNull(result); assertEquals(vm.getId(), result.getVmId());
          * assertEquals(restorePoint.getId(), result.getExternalId());
          * assertEquals("INCREMENTAL", result.getType());
@@ -286,7 +286,7 @@ public class BackrollBackupProviderTest {
          * assertEquals((Long)backupMetrics.getSize(), result.getSize());
          * assertEquals((Long)backupMetrics.getDeduplicated(),
          * result.getProtectedSize());
-         * 
+         *
          * Mockito.verify(clientMock).getBackupMetrics(vm.getUuid(),
          * restorePoint.getId());
          * Mockito.verify(backupDao).persist(Mockito.any(BackupVO.class));
@@ -303,14 +303,14 @@ public class BackrollBackupProviderTest {
         vm.setBackupOfferingId(4L);
         /*
          * Backup.Metric metric = new Backup.Metric(150L, 250L);
-         * 
+         *
          * BackupVO savedBackup = new BackupVO();
          * Mockito.doReturn(savedBackup).when(backupDao).persist(Mockito.any(BackupVO.
          * class));
-         * 
+         *
          * Backup result =
          * backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm, metric);
-         * 
+         *
          * assertNotNull(result); assertEquals(vm.getId(), result.getVmId());
          * assertEquals(restorePoint.getId(), result.getExternalId());
          * assertEquals("INCREMENTAL", result.getType());
@@ -320,7 +320,7 @@ public class BackrollBackupProviderTest {
          * assertEquals(vm.getAccountId(), result.getAccountId());
          * assertEquals(vm.getDomainId(), result.getDomainId());
          * assertEquals(vm.getDataCenterId(), result.getZoneId());
-         * 
+         *
          * Mockito.verify(backupDao).persist(Mockito.any(BackupVO.class));
          */
     }
