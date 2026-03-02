@@ -26,6 +26,8 @@ import org.apache.cloudstack.backup.Backup.RestorePoint;
 import org.apache.cloudstack.backup.backroll.BackrollClient;
 import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollOffering;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
 import org.apache.cloudstack.backup.dao.BackupDao;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.logging.log4j.Logger;
@@ -83,14 +85,14 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void listBackupOfferings_Test() throws BackrollApiException, IOException {
+    public void listBackupOfferings_Test() throws BackrollHttpClientException, IOException {
         Mockito.doReturn(Arrays.asList(new BackrollOffering("dummyName", "dummyId"))).when(clientMock).getBackupOfferings();
         List<BackupOffering> results = backupProvider.listBackupOfferings(2L);
         assertTrue(results.size() == 1);
     }
 
     @Test
-    public void takeBackup_Test() throws BackrollApiException, IOException {
+    public void takeBackup_Test() throws BackrollHttpClientException, IOException {
 
         VMInstanceVO vmInstanceVO = new VMInstanceVO();
         vmInstanceVO.setInstanceName("test");
@@ -129,7 +131,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void restoreVMFromBackupTrue_Test() throws BackrollApiException, IOException {
+    public void restoreVMFromBackupTrue_Test() throws BackrollHttpClientException, IOException {
         VMInstanceVO vmInstanceVO = new VMInstanceVO();
         vmInstanceVO.setDataCenterId(2l);
 
@@ -144,7 +146,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void restoreVMFromBackupFalse_Test() throws BackrollApiException, IOException {
+    public void restoreVMFromBackupFalse_Test() throws BackrollHttpClientException, IOException {
         VMInstanceVO vmInstanceVO = new VMInstanceVO();
         vmInstanceVO.setDataCenterId(2l);
 
@@ -203,7 +205,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void deleteBackupTestSuccess_Test() throws BackrollApiException, IOException {
+    public void deleteBackupTestSuccess_Test() throws BackrollHttpClientException, IOException {
         VMInstanceVO vmInstanceVO = new VMInstanceVO();
         vmInstanceVO.setInstanceName("test");
         vmInstanceVO.setDataCenterId(2l);
@@ -236,7 +238,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void listRestorePoints_Test() throws BackrollApiException, IOException {
+    public void listRestorePoints_Test() throws BackrollHttpClientException, IOException {
         List<RestorePoint> rps = Arrays.asList(new RestorePoint("rp1", new Date(), "incremental"), new RestorePoint("rp2", new Date(), "incremental"),
                 new RestorePoint("rp3", new Date(), "incremental"), new RestorePoint("rp4", new Date(), "incremental"));
 
@@ -254,7 +256,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void createNewBackupEntryForRestorePoint_Test() throws BackrollApiException, IOException {
+    public void createNewBackupEntryForRestorePoint_Test() throws BackrollHttpClientException, IOException {
         RestorePoint restorePoint = new RestorePoint("restore-123", new Date(), "INCREMENTAL");
 
         VMInstanceVO vm = new VMInstanceVO();
@@ -293,7 +295,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void createNewBackupEntryForRestorePoint_WithMetric_Test() throws BackrollApiException, IOException {
+    public void createNewBackupEntryForRestorePoint_WithMetric_Test() throws BackrollHttpClientException, IOException {
         RestorePoint restorePoint = new RestorePoint("restore-789", new Date(), "INCREMENTAL");
 
         VMInstanceVO vm = new VMInstanceVO();
@@ -325,7 +327,7 @@ public class BackrollBackupProviderTest {
     }
 
     @Test
-    public void createNewBackupEntryForRestorePoint_BackrollApiException_Test() throws BackrollApiException, IOException {
+    public void createNewBackupEntryForRestorePoint_BackrollHttpClientException_Test() throws BackrollHttpClientException, IOException {
 
         RestorePoint restorePoint = new RestorePoint("restore-404", new Date(), "INCREMENTAL");
 
@@ -336,13 +338,13 @@ public class BackrollBackupProviderTest {
 
         Backup.Metric metric = null;
 
-        Mockito.doThrow(new BackrollApiException()).when(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
+        Mockito.doThrow(new BackrollHttpClient.BackrollHttpClientException(new Exception())).when(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
 
         // backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm, metric);
     }
 
     @Test
-    public void createNewBackupEntryForRestorePoint_IOException_Test() throws BackrollApiException, IOException {
+    public void createNewBackupEntryForRestorePoint_IOException_Test() throws BackrollHttpClientException, IOException {
 
         RestorePoint restorePoint = new RestorePoint("restore-500", new Date(), "INCREMENTAL");
 

@@ -53,7 +53,7 @@ public class BackrollClient {
 
     private BackrollHttpClient backrollHttpClient;
 
-    public class BackrollClientException extends Exception {
+    public static class BackrollClientException extends Exception {
         public BackrollClientException(Throwable cause) {
             super(cause);
         }

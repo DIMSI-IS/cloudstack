@@ -68,7 +68,7 @@ public class BackrollHttpClient {
 
     private Logger logger = LogManager.getLogger(BackrollClient.class);
 
-    public class BackrollHttpClientException extends Exception {
+    public static class BackrollHttpClientException extends Exception {
         public BackrollHttpClientException(Throwable cause) {
             super(cause);
         }
@@ -130,7 +130,7 @@ public class BackrollHttpClient {
         request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + backrollToken);
     }
 
-    public class NotOkBodyException extends Exception {
+    public static class NotOkBodyException extends Exception {
     }
 
     public String okBody(final CloseableHttpResponse response) throws BackrollHttpClientException, NotOkBodyException {
@@ -204,7 +204,7 @@ public class BackrollHttpClient {
         }
     }
 
-    private boolean isAuthenticated() throws BackrollHttpClientException {
+    boolean isAuthenticated() throws BackrollHttpClientException {
         try {
             if (StringUtils.isEmpty(backrollToken)) {
                 logger.debug("isAuthenticated : token is empty : {}", backrollToken);

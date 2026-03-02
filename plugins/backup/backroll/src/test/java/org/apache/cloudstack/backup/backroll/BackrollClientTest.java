@@ -21,6 +21,7 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.BackupOffering;
+import org.apache.cloudstack.backup.backroll.BackrollClient.BackrollClientException;
 import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
 import org.apache.cloudstack.backup.backroll.model.BackrollVmBackup;
@@ -62,15 +63,15 @@ public class BackrollClientTest {
     private BackrollClient client;
 
     @Mock
-    private BackrollHttpClientProvider backrollHttpClientProviderMock;
+    private BackrollHttpClient backrollHttpClientMock;
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule(9399);
 
     @Before
     public void setUp() throws Exception {
-        backrollHttpClientProviderMock = mock(BackrollHttpClient.class);
-        client = new BackrollClient(backrollHttpClientProviderMock);
+        backrollHttpClientMock = mock(BackrollHttpClient.class);
+        client = new BackrollClient(backrollHttpClientMock);
         client.logger = Mockito.mock(Logger.class);
     }
 
@@ -83,8 +84,8 @@ public class BackrollClientTest {
         VirtualMachineBackupsResponse virtualMachineBackupsResponseMock = new ObjectMapper().readValue(virtualMachineResponseString, VirtualMachineBackupsResponse.class);
 
         // Mocking client responses
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        doReturn(virtualMachineBackupsResponseMock).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        doReturn(virtualMachineBackupsResponseMock).when(backrollHttpClientMock).getWaitParse(Mockito.anyString(), Mockito.any());
         // Run the method under test
         List<BackrollVmBackup> backupsTestList = client.getAllBackupsfromVirtualMachine(vmId);
 
@@ -93,7 +94,7 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void getBackupMetrics_Test() throws IOException, BackrollApiException {
+    public void getBackupMetrics_Test() throws IOException, BackrollHttpClientException {
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
         BackrollBackupMetricsResponse mockResponse = new BackrollBackupMetricsResponse();
@@ -101,8 +102,8 @@ public class BackrollClientTest {
         mockResponse.info.originalSize = "1000";
         mockResponse.info.deduplicatedSize = "800";
 
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        doReturn(mockResponse).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        doReturn(mockResponse).when(backrollHttpClientMock).getWaitParse(Mockito.anyString(), Mockito.any());
 
         BackrollBackupMetrics metrics = client.getBackupMetrics("dummyVMId", "dummyBackupId");
 
@@ -122,8 +123,8 @@ public class BackrollClientTest {
         mockResponse.infos.cache.stats = new CacheStats();
         mockResponse.infos.cache.stats.totalSize = "10000";
 
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        doReturn(mockResponse).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        doReturn(mockResponse).when(backrollHttpClientMock).getWaitParse(Mockito.anyString(), Mockito.any());
 
         Metric metrics = client.getVirtualMachineMetrics("dummyVMId");
 
@@ -132,7 +133,7 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void deleteBackup_Test() throws IOException, BackrollApiException {
+    public void deleteBackup_Test() throws IOException, BackrollHttpClientException {
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
 
@@ -141,8 +142,8 @@ public class BackrollClientTest {
         mockResponse.archives = new BackrollArchivesResponse();
         mockResponse.archives.archives = Arrays.asList(new BackrollArchiveResponse());
 
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).delete(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        doReturn(mockResponse).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).delete(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        doReturn(mockResponse).when(backrollHttpClientMock).getWaitParse(Mockito.anyString(), Mockito.any());
 
         Boolean isBackupDeleted = client.deleteBackup("dummyVMId", "dummyBackUpName");
 
@@ -150,9 +151,9 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void checkBackupTaskStatusSuccess_Test() throws IOException, BackrollHttpClientException {
+    public void checkBackupTaskStatusSuccess_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
         String backupResponse = "{\"state\":\"SUCCESS\",\"info\":\"test\"}";
-        doReturn(backupResponse).when(backrollHttpClientProviderMock).getWithoutParseResponse(Mockito.matches(".*status/.*"));
+        doReturn(backupResponse).when(backrollHttpClientMock).getWait(Mockito.matches(".*status/.*"));
 
         BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
 
@@ -161,22 +162,22 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void checkBackupTaskStatus_Test() throws IOException, BackrollHttpClientException {
+    public void checkBackupTaskStatus_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
         String backupResponse = "{\"state\":\"PENDING\",\"current\":0,\"total\":1,\"status\":\"Pending...\"}";
-        doReturn(backupResponse).when(backrollHttpClientProviderMock).getWithoutParseResponse(Mockito.matches(".*/status/.*"));
+        doReturn(backupResponse).when(backrollHttpClientMock).getWait(Mockito.matches(".*/status/.*"));
 
         BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
-
+ 
         assertEquals(TaskState.PENDING, status.getState());
     }
 
     @Test
-    public void restoreVMFromBackup_Test() throws IOException, BackrollApiException {
+    public void restoreVMFromBackup_Test() throws IOException, BackrollHttpClientException {
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
         String resultMock = "SUCCESS WOW YOUHOU";
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).post(Mockito.matches(".*/tasks/restore/.*"), Mockito.any(JSONObject.class), Mockito.any());
-        doReturn(resultMock).when(backrollHttpClientProviderMock).waitGetWithoutParseResponse(Mockito.anyString());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).post(Mockito.matches(".*/tasks/restore/.*"), Mockito.any(JSONObject.class), Mockito.any());
+        doReturn(resultMock).when(backrollHttpClientMock).getWait(Mockito.anyString());
 
         Boolean isRestoreOk = client.restoreVMFromBackup("dummyVMId", "dummyBackUpName");
 
@@ -188,22 +189,10 @@ public class BackrollClientTest {
 
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).post(Mockito.matches(".*/tasks/singlebackup/.*"), Mockito.nullable(JSONObject.class),
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).post(Mockito.matches(".*/tasks/singlebackup/.*"), Mockito.nullable(JSONObject.class),
                 Mockito.any());
 
         String response = client.startBackupJob("dummyJobId");
-
-        assertEquals("/status/f32092e4-3e8a-461b-8733-ed93e23fa782", response);
-    }
-
-    @Test
-    public void getBackupOfferingUrl_Test() throws IOException, BackrollApiException {
-        BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
-        backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock)
-                .get(Mockito.matches(".*/backup_policies.*"), Mockito.any());
-
-        String response = client.getBackupOfferingUrl();
 
         assertEquals("/status/f32092e4-3e8a-461b-8733-ed93e23fa782", response);
     }
@@ -241,9 +230,9 @@ public class BackrollClientTest {
 
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).get(Mockito.matches(".*/backup_policies.*"), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/backup_policies.*"), Mockito.any());
 
-        doReturn(backupPoliciesResponseMock).when(backrollHttpClientProviderMock).waitGet(Mockito.matches("/status/f32092e4-3e8a-461b-8733-ed93e23fa782"), Mockito.any());
+        doReturn(backupPoliciesResponseMock).when(backrollHttpClientMock).getWaitParse(Mockito.matches("/status/f32092e4-3e8a-461b-8733-ed93e23fa782"), Mockito.any());
 
         List<BackupOffering> response = client.getBackupOfferings();
 
@@ -252,7 +241,7 @@ public class BackrollClientTest {
     }
 
     @Test
-    public void listRestorePoints_Test() throws BackrollApiException, IOException {
+    public void listRestorePoints_Test() throws BackrollHttpClientException, IOException {
         String vmId = "vm-123";
 
         String virtualMachineResponseString = "{ \"state\": \"SUCCESS\", \"info\": { \"archives\": [ { \"archive\": \"ROOT-00000\", \"barchive\": \"ROOT-00000\", \"id\": \"25d55ad283aa400af464c76d713c07ad7d163abdd3b8fbcdbdc46b827e5e0457\", \"name\": \"ROOT-00000\", \"start\": \"2024-11-08T18:24:48.000000\", \"time\": \"2024-11-08T18:24:48.000000\" } ], \"encryption\": { \"mode\": \"none\" }, \"repository\": { \"id\": \"36a11ebc0775a097c927735cc7015d19be7309be69fc15b896c5b1fd87fcbd79\", \"last_modified\": \"2024-11-29T09:53:09.000000\", \"location\": \"/mnt/backup/backup1\" } } }";
@@ -260,8 +249,8 @@ public class BackrollClientTest {
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
         VirtualMachineBackupsResponse virtualMachineBackupsResponseMock = new ObjectMapper().readValue(virtualMachineResponseString, VirtualMachineBackupsResponse.class);
 
-        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientProviderMock).get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        doReturn(virtualMachineBackupsResponseMock).when(backrollHttpClientProviderMock).waitGet(Mockito.anyString(), Mockito.any());
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        doReturn(virtualMachineBackupsResponseMock).when(backrollHttpClientMock).getWaitParse(Mockito.anyString(), Mockito.any());
 
         List<Backup.RestorePoint> restorePoints = client.listRestorePoints(vmId);
 
@@ -273,7 +262,7 @@ public class BackrollClientTest {
         assertEquals(new DateTime("2024-11-08T18:24:48.000000").toDate(), rp1.getCreated());
         assertEquals("INCREMENTAL", rp1.getType());
 
-        Mockito.verify(backrollHttpClientProviderMock).get(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
-        Mockito.verify(backrollHttpClientProviderMock).waitGet(anyString(), Mockito.any());
+        Mockito.verify(backrollHttpClientMock).getParse(Mockito.matches(".*/virtualmachines/.*"), Mockito.any());
+        Mockito.verify(backrollHttpClientMock).getWaitParse(anyString(), Mockito.any());
     }
 }

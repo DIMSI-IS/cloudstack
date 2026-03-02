@@ -102,7 +102,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
             logger.info("BackrollProvider: results " + (results.size() > 0 ? "> 0" : "<= 0"));
             return results;
-        } catch (ParseException | BackrollApiException | IOException e) {
+        } catch (BackrollHttpClientException e) {
             logger.info("BackrollProvider: catch erreur: {}", e);
             throw new CloudRuntimeException("Failed to load backup offerings");
         }
@@ -131,7 +131,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
         try {
             return getClient(vm.getDataCenterId()).restoreVMFromBackup(vm.getUuid(), getBackupName(backup));
-        } catch (ParseException | BackrollApiException | IOException e) {
+        } catch (BackrollHttpClientException e) {
             throw new CloudRuntimeException("Failed to restore VM from Backup");
         }
     }
@@ -162,7 +162,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                         BackrollTaskStatus response;
                         try {
                             response = client.checkBackupTaskStatus(backup.getExternalId());
-                        } catch (ParseException | BackrollApiException | IOException e) {
+                        } catch (BackrollClientException e) {
                             logger.error(e);
                             throw new CloudRuntimeException("Failed to sync backups");
                         }
@@ -188,7 +188,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                                         backupToUpdate.setProtectedSize(backupMetrics.getDeduplicated());
                                         backupToUpdate.setSize(backupMetrics.getSize());
                                     }
-                                } catch (BackrollApiException | IOException e) {
+                                } catch (BackrollHttpClientException e) {
                                     logger.error(e);
                                     throw new CloudRuntimeException("Failed to get backup metrics");
                                 }
@@ -211,7 +211,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                                     backupToUpdate.setProtectedSize(backupMetrics.getDeduplicated());
                                     backupToUpdate.setSize(backupMetrics.getSize());
                                 }
-                            } catch (BackrollApiException | IOException e) {
+                            } catch (BackrollHttpClientException e) {
                                 logger.error(e);
                                 throw new CloudRuntimeException("Failed to get backup metrics");
                             }
@@ -251,7 +251,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                 logger.debug("Metrics for VM [uuid: {}, name: {}] is [backup size: {}, data size: {}].", vm.getUuid(), vm.getInstanceName(), metric.getBackupSize(),
                         metric.getDataSize());
                 metrics.put(vm, metric);
-            } catch (BackrollApiException | IOException e) {
+            } catch (BackrollHttpClientException e) {
                 throw new CloudRuntimeException("Failed to retrieve backup metrics");
             }
         }
@@ -297,7 +297,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
             return new Pair<Boolean, Backup>(result, backup);
 
-        } catch (ParseException | BackrollApiException | IOException e) {
+        } catch (BackrollHttpClientException e) {
             logger.debug(e.getMessage());
             throw new CloudRuntimeException("Failed to take backup");
         }
@@ -330,7 +330,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                         logger.debug("BACKROLL: Backup deletion for backup {} complete on backroll side.", backup.getUuid());
                         return deleteBackupInDb(backup);
                     }
-                } catch (BackrollHttpClientException | IOException e) {
+                } catch (BackrollHttpClientException e) {
                     logger.error(e);
                     throw new CloudRuntimeException("BACKROLL: Failed to delete backup");
                 }
@@ -354,7 +354,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
         try {
             if (backrollClient == null) {
                 logger.debug("backroll client null - instantiation of new one ");
-                BackrollHttpClientProvider provider = BackrollHttpClientProvider.createProvider(new BackrollHttpClientProvider(), BackrollUrlConfigKey.valueIn(zoneId),
+                BackrollHttpClient provider = BackrollHttpClient.createProvider(new BackrollHttpClient(), BackrollUrlConfigKey.valueIn(zoneId),
                         BackrollAppNameConfigKey.valueIn(zoneId), BackrollPasswordConfigKey.valueIn(zoneId), true, 300, 600);
                 backrollClient = new BackrollClient(provider);
             }
@@ -388,7 +388,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
         try {
             final BackrollClient client = getClient(vm.getDataCenterId());
             return client.listRestorePoints(vm.getUuid());
-        } catch (BackrollApiException | IOException e) {
+        } catch (BackrollHttpClientException e) {
             logger.error(e);
             throw new CloudRuntimeException("Error while listing restore points");
         }
@@ -414,7 +414,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                 backupToInsert.setProtectedSize(backupMetrics.getDeduplicated());
                 backupToInsert.setSize(backupMetrics.getSize());
             }
-        } catch (IOException | BackrollApiException e) {
+        } catch (BackrollHttpClientException e) {
             logger.error(e);
         }
 

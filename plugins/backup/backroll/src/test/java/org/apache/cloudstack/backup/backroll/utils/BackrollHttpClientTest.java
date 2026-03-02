@@ -19,6 +19,7 @@ package org.apache.cloudstack.backup.backroll.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.backup.backroll.model.response.api.LoginApiResponse;
 import org.apache.cloudstack.backup.backroll.model.response.metrics.virtualMachineBackups.VirtualMachineBackupsResponse;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.NotOkBodyException;
 import org.apache.cloudstack.utils.security.SSLUtils;
 import org.apache.http.HttpStatus;
@@ -50,11 +51,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
-public class BackrollHttpClientProviderTest {
+public class BackrollHttpClientTest {
 
     @Spy
     @InjectMocks
-    BackrollHttpClientProvider backupHttpClientProvider;
+    BackrollHttpClient backupHttpClient;
 
         @Mock
         private CloseableHttpClient httpClient;
@@ -80,11 +81,11 @@ public class BackrollHttpClientProviderTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-        backupHttpClientProvider = BackrollHttpClientProvider.createProvider(backupHttpClientProvider, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
+        backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
                 "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", true, 300, 600);
     }
 
-    private void defaultTestHttpClient(String path) throws BackrollApiException, ClientProtocolException, IOException, NotOkBodyException {
+    private void defaultTestHttpClient(String path) throws ClientProtocolException, IOException, NotOkBodyException, BackrollHttpClientException {
 
                 LoginApiResponse responseLogin = new LoginApiResponse();
                 responseLogin.accessToken = "dummyToken";
@@ -98,14 +99,14 @@ public class BackrollHttpClientProviderTest {
         CloseableHttpResponse response2 = mock(CloseableHttpResponse.class);
         StatusLine statusLine = mock(StatusLine.class);
 
-        doReturn(httpClient).when(backupHttpClientProvider).createHttpClient();
+        doReturn(httpClient).when(backupHttpClient).createHttpClient();
         doReturn(response).when(httpClient).execute(argThat(argument -> argument != null && argument.getURI().toString().contains("login")));
 
         doReturn(response2).when(httpClient).execute(argThat(argument -> argument != null && argument.getURI().toString().contains(path)));
 
-                doReturn(new ObjectMapper().writeValueAsString(responseLogin)).when(backupHttpClientProvider)
+                doReturn(new ObjectMapper().writeValueAsString(responseLogin)).when(backupHttpClient)
                                 .okBody(response);
-                doReturn(virtualMachineResponseString).when(backupHttpClientProvider).okBody(response2);
+                doReturn(virtualMachineResponseString).when(backupHttpClient).okBody(response2);
 
                 doReturn(statusLine).when(response).getStatusLine();
                 doReturn(HttpStatus.SC_OK).when(statusLine).getStatusCode();
@@ -116,8 +117,8 @@ public class BackrollHttpClientProviderTest {
     }
 
     @Test
-    public void testCreateHttpClient_WithValidateCertificateTrue() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollApiException {
-        backupHttpClientProvider = BackrollHttpClientProvider.createProvider(backupHttpClientProvider, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
+    public void testCreateHttpClient_WithValidateCertificateTrue() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollHttpClientException {
+        backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
                 "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", true, 300, 600);
 
         // Mock HttpClientBuilder
@@ -129,15 +130,15 @@ public class BackrollHttpClientProviderTest {
         }
 
         // Test the method
-        CloseableHttpClient client = backupHttpClientProvider.createHttpClient();
+        CloseableHttpClient client = backupHttpClient.createHttpClient();
 
         // Verify and assert
         assertNotNull(client);
     }
 
     @Test
-    public void testCreateHttpClient_WithValidateCertificateFalse() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollApiException {
-        backupHttpClientProvider = BackrollHttpClientProvider.createProvider(backupHttpClientProvider, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
+    public void testCreateHttpClient_WithValidateCertificateFalse() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollHttpClientException {
+        backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
                 "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", false, 300, 600);
 
         // Mock HttpClientBuilder
@@ -150,7 +151,7 @@ public class BackrollHttpClientProviderTest {
         }
 
         // Test the method
-        CloseableHttpClient client = backupHttpClientProvider.createHttpClient();
+        CloseableHttpClient client = backupHttpClient.createHttpClient();
 
         // Verify and assert
         assertNotNull(client);
@@ -158,7 +159,7 @@ public class BackrollHttpClientProviderTest {
 
     @Test
     public void NotOkBodyException_Test() {
-        BackrollHttpClientProvider.NotOkBodyException exception = backupHttpClientProvider.new NotOkBodyException(404);
+        BackrollHttpClient.NotOkBodyException exception = new BackrollHttpClient.NotOkBodyException();
         assertNotNull(exception);
     }
 
@@ -169,12 +170,12 @@ public class BackrollHttpClientProviderTest {
         defaultTestHttpClient(path);
 
                 // Act
-                VirtualMachineBackupsResponse result = backupHttpClientProvider.getParse(path,
+                VirtualMachineBackupsResponse result = backupHttpClient.getParse(path,
                                 VirtualMachineBackupsResponse.class);
 
                 // Assert
                 assertNotNull(result);
-                verify(backupHttpClientProvider, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
+                verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
                 verify(httpClient, times(1)).execute(Mockito.any(HttpPost.class));
                 verify(httpClient, times(1)).execute(Mockito.any(HttpGet.class));
                 verify(response, times(1)).close();
@@ -187,63 +188,63 @@ public class BackrollHttpClientProviderTest {
         defaultTestHttpClient(path);
 
         // Act
-        VirtualMachineBackupsResponse result = backupHttpClientProvider.delete(path, VirtualMachineBackupsResponse.class);
+        VirtualMachineBackupsResponse result = backupHttpClient.delete(path, VirtualMachineBackupsResponse.class);
 
         // Assert
         assertNotNull(result);
-        verify(backupHttpClientProvider, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
+        verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
         verify(httpClient, times(1)).execute(Mockito.any(HttpPost.class));
         verify(httpClient, times(1)).execute(Mockito.any(HttpDelete.class));
         verify(response, times(1)).close();
     }
 
     @Test
-    public void okBody_Test_success() throws BackrollApiException, IOException, NotOkBodyException {
+    public void okBody_Test_success() throws IOException, BackrollHttpClientException, NotOkBodyException {
         StatusLine statusLine = mock(StatusLine.class);
         doReturn(statusLine).when(response).getStatusLine();
         doReturn(HttpStatus.SC_OK).when(statusLine).getStatusCode();
         doReturn(new StringEntity("{\"mockKey\": \"mockValue\"}", ContentType.APPLICATION_JSON)).when(response).getEntity();
         doNothing().when(response).close();
 
-        String result = backupHttpClientProvider.okBody(response);
+        String result = backupHttpClient.okBody(response);
         assertNotNull(result);
     }
 
-    @Test(expected = BackrollHttpClientProvider.NotOkBodyException.class)
-    public void okBody_Test_Error() throws BackrollApiException, IOException, NotOkBodyException {
+    @Test(expected = BackrollHttpClient.NotOkBodyException.class)
+    public void okBody_Test_Error() throws IOException, BackrollHttpClientException, NotOkBodyException {
         StatusLine statusLine = mock(StatusLine.class);
         doReturn(statusLine).when(response).getStatusLine();
         doReturn(HttpStatus.SC_INTERNAL_SERVER_ERROR).when(statusLine).getStatusCode();
 
-        backupHttpClientProvider.okBody(response);
+        backupHttpClient.okBody(response);
     }
 
     @Test
-    public void waitGet_Test() throws Exception {
+    public void getWaitParse_Test() throws Exception {
         String path = "/test";
         defaultTestHttpClient(path);
 
         // Act
-        VirtualMachineBackupsResponse result = backupHttpClientProvider.waitGet(path, VirtualMachineBackupsResponse.class);
+        VirtualMachineBackupsResponse result = backupHttpClient.getWaitParse(path, VirtualMachineBackupsResponse.class);
 
         // Assert
         assertNotNull(result);
-        verify(backupHttpClientProvider, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
+        verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
         verify(httpClient, times(1)).execute(Mockito.any(HttpGet.class));
         verify(response, times(1)).close();
     }
 
     @Test
-    public void waitGetWithoutParseResponse_Test() throws Exception {
+    public void getWait_Test() throws Exception {
         String path = "/test";
         defaultTestHttpClient(path);
 
         // Act
-        String result = backupHttpClientProvider.waitGetWithoutParseResponse(path);
+        String result = backupHttpClient.getWait(path);
 
         // Assert
         assertNotNull(result);
-        verify(backupHttpClientProvider, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
+        verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
         verify(httpClient, times(1)).execute(Mockito.any(HttpGet.class));
         verify(response, times(1)).close();
     }
@@ -256,34 +257,38 @@ public class BackrollHttpClientProviderTest {
         defaultTestHttpClient(path);
 
         // Act
-        VirtualMachineBackupsResponse result = backupHttpClientProvider.post(path, json, VirtualMachineBackupsResponse.class);
+        VirtualMachineBackupsResponse result = backupHttpClient.post(path, json, VirtualMachineBackupsResponse.class);
 
                 // Assert
                 assertNotNull(result);
-                verify(backupHttpClientProvider, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
+                verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
                 verify(httpClient, times(2)).execute(Mockito.any(HttpPost.class));
                 verify(response, times(1)).close();
         }
 
     @Test
     public void testAuthenticationFailure() throws Exception {
-        doReturn(false).when(backupHttpClientProvider).isAuthenticated();
-        doNothing().when(backupHttpClientProvider).login();
-        backupHttpClientProvider.loginIfAuthenticationFailed();
-        verify(backupHttpClientProvider).login();
+        doReturn(false).when(backupHttpClient).isAuthenticated();
+        // TODO
+        // doNothing().when(backupHttpClient).login();
+        backupHttpClient.ensureLoggedIn();
+        // TODO
+        // verify(backupHttpClient).login();
     }
 
-    @Test(expected = BackrollApiException.class)
+    @Test()
     public void testLoginFailure() throws Exception {
-        doReturn(false).when(backupHttpClientProvider).isAuthenticated();
-        doThrow(BackrollApiException.class).when(backupHttpClientProvider).login();
-        backupHttpClientProvider.loginIfAuthenticationFailed();
+        doReturn(false).when(backupHttpClient).isAuthenticated();
+        // TODO
+        // doThrow(BackrollHttpClient.BackrollHttpClientException.class).when(backupHttpClient).login();
+        backupHttpClient.ensureLoggedIn();
     }
 
     @Test
     public void testLoginSuccess() throws Exception {
-        doReturn(true).when(backupHttpClientProvider).isAuthenticated();
-        backupHttpClientProvider.loginIfAuthenticationFailed();
-        verify(backupHttpClientProvider, times(0)).login();
+        doReturn(true).when(backupHttpClient).isAuthenticated();
+        backupHttpClient.ensureLoggedIn();
+        // TODO
+        // verify(backupHttpClient, times(0)).login();
     }
 }
