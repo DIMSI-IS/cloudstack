@@ -211,7 +211,7 @@ public class BackrollHttpClient {
                 return false;
             }
 
-            final HttpPost request = new HttpPost(getApiUrl(AUTH_TEST));
+            final HttpGet request = new HttpGet(getApiUrl(AUTH_TEST));
             setRequestHeaders(request);
 
             try (CloseableHttpClient httpClient = createHttpClient()) {
