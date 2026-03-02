@@ -69,8 +69,8 @@ public class BackrollHttpClient {
     private Logger logger = LogManager.getLogger(BackrollClient.class);
 
     public class BackrollHttpClientException extends Exception {
-        public BackrollHttpClientException(Exception parentException) {
-            super(parentException);
+        public BackrollHttpClientException(Throwable cause) {
+            super(cause);
         }
     }
 

@@ -16,10 +16,6 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,8 +38,8 @@ import org.apache.cloudstack.backup.backroll.model.response.metrics.virtualMachi
 import org.apache.cloudstack.backup.backroll.model.response.metrics.virtualMachineBackups.VirtualMachineBackupsResponse;
 import org.apache.cloudstack.backup.backroll.model.response.policy.BackrollBackupPolicyResponse;
 import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPoliciesResponse;
-import org.apache.cloudstack.backup.backroll.utils.BackrollApiException;
-import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClientProvider;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.logging.log4j.LogManager;
@@ -53,44 +49,48 @@ import org.joda.time.DateTime;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class BackrollClient {
-
     protected Logger logger = LogManager.getLogger(BackrollClient.class);
 
-    private BackrollHttpClient httpProvider;
+    private BackrollHttpClient backrollHttpClient;
 
-    public BackrollClient(BackrollHttpClient httpProvider)
-            throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
-
-        this.httpProvider = httpProvider;
+    public class BackrollClientException extends Exception {
+        public BackrollClientException(Throwable cause) {
+            super(cause);
+        }
     }
 
-    public String startBackupJob(final String jobId) throws IOException, BackrollHttpClientException {
+    public BackrollClient(BackrollHttpClient backrollHttpClient) {
+        this.backrollHttpClient = backrollHttpClient;
+    }
+
+    public String startBackupJob(final String jobId) throws BackrollHttpClientException {
         logger.info("startBackupJob : Trying to start backup for Backroll job: {}", jobId);
         String backupJob = "";
-        BackrollTaskRequestResponse requestResponse = httpProvider.post(String.format("/tasks/singlebackup/%s", jobId),
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.post(String.format("/tasks/singlebackup/%s", jobId),
                 null, BackrollTaskRequestResponse.class);
         logger.info("startBackupJob : BackupJob status link: {}", requestResponse.location);
         backupJob = requestResponse.location.replace("/api/v1", "");
         return StringUtils.isEmpty(backupJob) ? null : backupJob;
     }
 
-    public String getBackupOfferingUrl() throws IOException, BackrollApiException {
+    public String getBackupOfferingUrl() throws BackrollHttpClientException {
         logger.info("Trying to get backroll backup policies url");
         String url = "";
-        BackrollTaskRequestResponse requestResponse = httpProvider.get("/backup_policies",
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.getParse("/backup_policies",
                 BackrollTaskRequestResponse.class);
         logger.info("BackrollClient:getBackupOfferingUrl:Apres Parse:  " + requestResponse.location);
         url = requestResponse.location.replace("/api/v1", "");
         return StringUtils.isEmpty(url) ? null : url;
     }
 
-    public List<BackupOffering> getBackupOfferings(String idTask) throws BackrollHttpClientException, IOException {
+    public List<BackupOffering> getBackupOfferings(String idTask) throws BackrollHttpClientException {
         logger.info("Trying to list backroll backup policies");
         final List<BackupOffering> policies = new ArrayList<>();
-        BackupPoliciesResponse backupPoliciesResponse = httpProvider.waitGet(idTask, BackupPoliciesResponse.class);
+        BackupPoliciesResponse backupPoliciesResponse = backrollHttpClient.getWaitParse(idTask, BackupPoliciesResponse.class);
         logger.info(
                 "BackrollClient:getBackupOfferings:Apres Parse:  " + backupPoliciesResponse.backupPolicies.get(0).name);
         for (final BackrollBackupPolicyResponse policy : backupPoliciesResponse.backupPolicies) {
@@ -100,8 +100,8 @@ public class BackrollClient {
         return policies;
     }
 
-    public boolean restoreVMFromBackup(final String vmId, final String backupName)
-            throws IOException, BackrollApiException {
+    public boolean restoreVMFromBackup(final String vmId, final String backupName) throws BackrollHttpClientException
+             {
         logger.info("Start restore backup with backroll with backup {} for vm {}", backupName, vmId);
 
         boolean isRestoreOk = false;
@@ -117,11 +117,11 @@ public class BackrollClient {
             logger.error("Backroll Error: {}", e.getMessage());
         }
 
-        BackrollTaskRequestResponse requestResponse = httpProvider.post(String.format("/tasks/restore/%s", vmId),
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.post(String.format("/tasks/restore/%s", vmId),
                 jsonBody, BackrollTaskRequestResponse.class);
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
 
-        String result = httpProvider.waitGetWithoutParseResponse(urlToRequest);
+        String result = backrollHttpClient.getWait(urlToRequest);
         if (result.contains("SUCCESS")) {
             logger.debug("RESTORE SUCCESS content : " + result);
             logger.debug("RESTORE SUCCESS");
@@ -131,36 +131,43 @@ public class BackrollClient {
         return isRestoreOk;
     }
 
-    public BackrollTaskStatus checkBackupTaskStatus(String taskId) throws IOException, BackrollHttpClientException {
-        logger.info("Trying to get backup status for Backroll task: {}", taskId);
+    public BackrollTaskStatus checkBackupTaskStatus(String taskId) throws BackrollClientException {
+        try {
+            logger.info("Trying to get backup status for Backroll task: {}", taskId);
 
-        BackrollTaskStatus status = new BackrollTaskStatus();
+            BackrollTaskStatus status = new BackrollTaskStatus();
 
-        String backupResponse = httpProvider.get("/status/" + taskId);
+            String backupResponse = backrollHttpClient.get("/status/" + taskId);
 
-        if (backupResponse.contains(TaskState.FAILURE) || backupResponse.contains(TaskState.PENDING)) {
-            BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse,
-                    BackrollBackupStatusResponse.class);
-            status.setState(backupStatusRequestResponse.state);
-        } else {
-            BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper()
-                    .readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
-            status.setState(backupStatusSuccessRequestResponse.state);
-            status.setInfo(backupStatusSuccessRequestResponse.info);
+            if (backupResponse.contains(TaskState.FAILURE) || backupResponse.contains(TaskState.PENDING)) {
+                BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse,
+                        BackrollBackupStatusResponse.class);
+                status.setState(backupStatusRequestResponse.state);
+            } else {
+                BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper()
+                        .readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
+                status.setState(backupStatusSuccessRequestResponse.state);
+                status.setInfo(backupStatusSuccessRequestResponse.info);
+            }
+
+            return StringUtils.isEmpty(status.getState()) ? null : status;
+        } catch (Exception exception) {
+            logger.error(exception);
+            exception.printStackTrace();
+            throw new BackrollClientException(exception);
         }
-
-        return StringUtils.isEmpty(status.getState()) ? null : status;
     }
 
-    public boolean deleteBackup(final String vmId, final String backupName) throws IOException, BackrollApiException {
+    public boolean deleteBackup(final String vmId, final String backupName) throws BackrollHttpClientException
+             {
         logger.info("BACKROLL: Trying to delete backup {} for vm {} using Backroll", vmId, backupName);
         boolean isBackupDeleted = false;
 
-        BackrollTaskRequestResponse requestResponse = httpProvider.delete(
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.delete(
                 String.format("/virtualmachines/%s/backups/%s", vmId, backupName), BackrollTaskRequestResponse.class);
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
 
-        BackrollBackupsFromVMResponse backrollBackupsFromVMResponse = httpProvider.waitGet(urlToRequest,
+        BackrollBackupsFromVMResponse backrollBackupsFromVMResponse = backrollHttpClient.getWaitParse(urlToRequest,
                 BackrollBackupsFromVMResponse.class);
         logger.debug(backrollBackupsFromVMResponse.state);
         isBackupDeleted = backrollBackupsFromVMResponse.state.equals(TaskState.SUCCESS);
@@ -168,17 +175,17 @@ public class BackrollClient {
         return isBackupDeleted;
     }
 
-    public Metric getVirtualMachineMetrics(final String vmId) throws IOException, BackrollHttpClientException {
+    public Metric getVirtualMachineMetrics(final String vmId) throws BackrollHttpClientException  {
         logger.info("Trying to retrieve virtual machine metric from Backroll for vm {}", vmId);
 
         Metric metric = new Metric(0L, 0L);
 
-        BackrollTaskRequestResponse requestResponse = httpProvider
-                .get(String.format("/virtualmachines/%s/repository", vmId), BackrollTaskRequestResponse.class);
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient
+                .getParse(String.format("/virtualmachines/%s/repository", vmId), BackrollTaskRequestResponse.class);
 
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
 
-        BackrollVmMetricsResponse vmMetricsResponse = httpProvider.waitGet(urlToRequest,
+        BackrollVmMetricsResponse vmMetricsResponse = backrollHttpClient.getWaitParse(urlToRequest,
                 BackrollVmMetricsResponse.class);
 
         if (vmMetricsResponse != null && vmMetricsResponse.state.equals(TaskState.SUCCESS)) {
@@ -197,20 +204,20 @@ public class BackrollClient {
         return metric;
     }
 
-    public BackrollBackupMetrics getBackupMetrics(String vmId, String backupId)
-            throws IOException, BackrollApiException {
+    public BackrollBackupMetrics getBackupMetrics(String vmId, String backupId) throws BackrollHttpClientException
+             {
         logger.info("Trying to get backup metrics for VM: {}, and backup: {}", vmId, backupId);
 
         BackrollBackupMetrics metrics = null;
 
-        BackrollTaskRequestResponse requestResponse = httpProvider.get(
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.getParse(
                 String.format("/virtualmachines/%s/backups/%s", vmId, backupId), BackrollTaskRequestResponse.class);
 
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
 
         logger.debug(urlToRequest);
 
-        BackrollBackupMetricsResponse metricsResponse = httpProvider.waitGet(urlToRequest,
+        BackrollBackupMetricsResponse metricsResponse = backrollHttpClient.getWaitParse(urlToRequest,
                 BackrollBackupMetricsResponse.class);
         if (metricsResponse.info != null) {
             metrics = new BackrollBackupMetrics(Long.parseLong(metricsResponse.info.originalSize),
@@ -219,8 +226,8 @@ public class BackrollClient {
         return metrics;
     }
 
-    public List<BackrollVmBackup> getAllBackupsfromVirtualMachine(String vmId)
-            throws BackrollApiException, IOException {
+    public List<BackrollVmBackup> getAllBackupsfromVirtualMachine(String vmId) throws BackrollHttpClientException
+            {
         List<BackrollVmBackup> backups = new ArrayList<BackrollVmBackup>();
         List<BackupInfos> backupInfos = getBackupInfosFromVm(vmId);
         if (backupInfos != null && backupInfos.size() > 0) {
@@ -232,15 +239,15 @@ public class BackrollClient {
         return backups;
     }
 
-    public List<BackupInfos> getBackupInfosFromVm(String vmId)
-            throws BackrollApiException, IOException {
+    public List<BackupInfos> getBackupInfosFromVm(String vmId) throws BackrollHttpClientException
+             {
         logger.info("Trying to retrieve all backups for vm {}", vmId);
-        BackrollTaskRequestResponse requestResponse = httpProvider
-                .get(String.format("/virtualmachines/%s/backups", vmId), BackrollTaskRequestResponse.class);
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient
+                .getParse(String.format("/virtualmachines/%s/backups", vmId), BackrollTaskRequestResponse.class);
 
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
         logger.debug(urlToRequest);
-        VirtualMachineBackupsResponse virtualMachineBackupsResponse = httpProvider.waitGet(urlToRequest,
+        VirtualMachineBackupsResponse virtualMachineBackupsResponse = backrollHttpClient.getWaitParse(urlToRequest,
                 VirtualMachineBackupsResponse.class);
         if (virtualMachineBackupsResponse.state.equals(TaskState.SUCCESS)) {
             return virtualMachineBackupsResponse.info.archives;
@@ -249,7 +256,7 @@ public class BackrollClient {
 
     }
 
-    public List<Backup.RestorePoint> listRestorePoints(String vmId) throws BackrollApiException, IOException {
+    public List<Backup.RestorePoint> listRestorePoints(String vmId) throws BackrollHttpClientException  {
         List<Backup.RestorePoint> backups = new ArrayList<Backup.RestorePoint>();
         List<BackupInfos> backupInfos = getBackupInfosFromVm(vmId);
         if (backupInfos != null && backupInfos.size() > 0) {

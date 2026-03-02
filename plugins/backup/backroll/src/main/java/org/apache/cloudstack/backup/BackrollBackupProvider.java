@@ -33,10 +33,12 @@ import javax.inject.Inject;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.Backup.RestorePoint;
 import org.apache.cloudstack.backup.backroll.BackrollClient;
+import org.apache.cloudstack.backup.backroll.BackrollClient.BackrollClientException;
 import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
-import org.apache.cloudstack.backup.backroll.utils.BackrollApiException;
-import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClientProvider;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
+
 import org.apache.cloudstack.backup.dao.BackupDao;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
