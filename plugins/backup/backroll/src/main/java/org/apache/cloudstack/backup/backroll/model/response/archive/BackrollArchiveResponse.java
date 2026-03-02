@@ -16,9 +16,8 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll.model.response.archive;
 
-import org.joda.time.DateTime;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
 
 public class BackrollArchiveResponse {
     @JsonProperty("archive")

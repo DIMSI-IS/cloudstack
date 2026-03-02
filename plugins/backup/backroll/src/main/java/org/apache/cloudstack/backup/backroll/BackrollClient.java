@@ -16,12 +16,10 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.backup.Backup;
-import org.apache.cloudstack.backup.BackupOffering;
 import org.apache.cloudstack.backup.Backup.Metric;
+import org.apache.cloudstack.backup.BackupOffering;
 import org.apache.cloudstack.backup.backroll.model.BackrollBackupMetrics;
 import org.apache.cloudstack.backup.backroll.model.BackrollOffering;
 import org.apache.cloudstack.backup.backroll.model.BackrollTaskStatus;
@@ -41,16 +39,14 @@ import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPolicie
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
 import org.apache.commons.lang3.StringUtils;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.joda.time.DateTime;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BackrollClient {
     protected Logger logger = LogManager.getLogger(BackrollClient.class);
@@ -73,26 +69,28 @@ public class BackrollClient {
         BackrollTaskRequestResponse requestResponse = backrollHttpClient.post(String.format("/tasks/singlebackup/%s", jobId),
                 null, BackrollTaskRequestResponse.class);
         logger.info("startBackupJob : BackupJob status link: {}", requestResponse.location);
-        backupJob = requestResponse.location.replace("/api/v1", "");
-        return StringUtils.isEmpty(backupJob) ? null : backupJob;
+
+        var backupExternalId = requestResponse.location.replace("/api/v1/status/", "");
+
+        return StringUtils.isEmpty(backupExternalId) ? null : backupExternalId;
     }
 
-    public String getBackupOfferingUrl() throws BackrollHttpClientException {
+    public List<BackupOffering> getBackupOfferings() throws BackrollHttpClientException {
+
         logger.info("Trying to get backroll backup policies url");
-        String url = "";
-        BackrollTaskRequestResponse requestResponse = backrollHttpClient.getParse("/backup_policies",
-                BackrollTaskRequestResponse.class);
+        String urlTask = "";
+        BackrollTaskRequestResponse requestResponse = backrollHttpClient.getParse("/backup_policies", BackrollTaskRequestResponse.class);
         logger.info("BackrollClient:getBackupOfferingUrl:Apres Parse:  " + requestResponse.location);
-        url = requestResponse.location.replace("/api/v1", "");
-        return StringUtils.isEmpty(url) ? null : url;
-    }
+        urlTask = requestResponse.location.replace("/api/v1", "");
 
-    public List<BackupOffering> getBackupOfferings(String idTask) throws BackrollHttpClientException {
+        if (StringUtils.isEmpty(urlTask)) {
+            return new ArrayList<BackupOffering>();
+        }
+
         logger.info("Trying to list backroll backup policies");
         final List<BackupOffering> policies = new ArrayList<>();
-        BackupPoliciesResponse backupPoliciesResponse = backrollHttpClient.getWaitParse(idTask, BackupPoliciesResponse.class);
-        logger.info(
-                "BackrollClient:getBackupOfferings:Apres Parse:  " + backupPoliciesResponse.backupPolicies.get(0).name);
+        BackupPoliciesResponse backupPoliciesResponse = backrollHttpClient.getWaitParse(urlTask, BackupPoliciesResponse.class);
+        logger.info("BackrollClient:getBackupOfferings:Apres Parse:  " + backupPoliciesResponse.backupPolicies.get(0).name);
         for (final BackrollBackupPolicyResponse policy : backupPoliciesResponse.backupPolicies) {
             policies.add(new BackrollOffering(policy.name, policy.id));
         }
@@ -139,16 +137,14 @@ public class BackrollClient {
 
             String backupResponse = backrollHttpClient.get("/status/" + taskId);
 
-            if (backupResponse.contains(TaskState.FAILURE) || backupResponse.contains(TaskState.PENDING)) {
-                BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse,
-                        BackrollBackupStatusResponse.class);
-                status.setState(backupStatusRequestResponse.state);
-            } else {
-                BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper()
-                        .readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
-                status.setState(backupStatusSuccessRequestResponse.state);
-                status.setInfo(backupStatusSuccessRequestResponse.info);
-            }
+        if (backupResponse.contains(TaskState.FAILURE) || backupResponse.contains(TaskState.PENDING)) {
+            BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusResponse.class);
+            status.setState(backupStatusRequestResponse.state);
+        } else {
+            BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
+            status.setState(backupStatusSuccessRequestResponse.state);
+            status.setInfo(backupStatusSuccessRequestResponse.info);
+        }
 
             return StringUtils.isEmpty(status.getState()) ? null : status;
         } catch (Exception exception) {
@@ -220,8 +216,7 @@ public class BackrollClient {
         BackrollBackupMetricsResponse metricsResponse = backrollHttpClient.getWaitParse(urlToRequest,
                 BackrollBackupMetricsResponse.class);
         if (metricsResponse.info != null) {
-            metrics = new BackrollBackupMetrics(Long.parseLong(metricsResponse.info.originalSize),
-                    Long.parseLong(metricsResponse.info.deduplicatedSize));
+            metrics = new BackrollBackupMetrics(Long.parseLong(metricsResponse.info.originalSize), Long.parseLong(metricsResponse.info.deduplicatedSize));
         }
         return metrics;
     }
