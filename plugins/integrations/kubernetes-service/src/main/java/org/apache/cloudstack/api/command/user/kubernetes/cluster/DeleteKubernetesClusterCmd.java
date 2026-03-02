@@ -54,7 +54,7 @@ public class DeleteKubernetesClusterCmd extends BaseAsyncCmd {
             type = CommandType.UUID,
             entityType = KubernetesClusterResponse.class,
             required = true,
-            description = "the ID of the Kubernetes cluster")
+            description = "The ID of the Kubernetes cluster")
     private Long id;
 
     @Parameter(name = ApiConstants.CLEANUP,
@@ -93,7 +93,8 @@ public class DeleteKubernetesClusterCmd extends BaseAsyncCmd {
     public void execute() throws ServerApiException, ConcurrentOperationException {
         try {
             if (!kubernetesClusterService.deleteKubernetesCluster(this)) {
-                throw new ServerApiException(ApiErrorCode.INTERNAL_ERROR, String.format("Failed to delete Kubernetes cluster ID: %d", getId()));
+                KubernetesCluster cluster = kubernetesClusterService.findById(getId());
+                throw new ServerApiException(ApiErrorCode.INTERNAL_ERROR, String.format("Failed to delete Kubernetes cluster %s with id: %d", cluster, getId()));
             }
             SuccessResponse response = new SuccessResponse(getCommandName());
             setResponseObject(response);
@@ -125,14 +126,7 @@ public class DeleteKubernetesClusterCmd extends BaseAsyncCmd {
 
     @Override
     public String getEventDescription() {
-        String description = "Deleting Kubernetes cluster";
-        KubernetesCluster cluster = _entityMgr.findById(KubernetesCluster.class, getId());
-        if (cluster != null) {
-            description += String.format(" ID: %s", cluster.getUuid());
-        } else {
-            description += String.format(" ID: %d", getId());
-        }
-        return description;
+        return "Deleting Kubernetes cluster with ID: " + getResourceUuid(ApiConstants.ID);
     }
 
 }

@@ -181,7 +181,7 @@ public class CAManagerImpl extends ManagerBase implements CAManager {
         if (host == null) {
             throw new CloudRuntimeException("Unable to find valid host to renew certificate for");
         }
-        CallContext.current().setEventDetails("host id: " + host.getId());
+        CallContext.current().setEventDetails("Host ID: " + host.getUuid());
         CallContext.current().putContextParameter(Host.class, host.getUuid());
         String csr = null;
 
@@ -195,8 +195,8 @@ public class CAManagerImpl extends ManagerBase implements CAManager {
             final Certificate certificate = issueCertificate(csr, Arrays.asList(host.getName(), host.getPrivateIpAddress()), Arrays.asList(host.getPrivateIpAddress(), host.getPublicIpAddress(), host.getStorageIpAddress()), CAManager.CertValidityPeriod.value(), caProvider);
             return deployCertificate(host, certificate, reconnect, null);
         } catch (final AgentUnavailableException | OperationTimedoutException e) {
-            logger.error("Host/agent is not available or operation timed out, failed to setup keystore and generate CSR for host/agent id=" + host.getId() + ", due to: ", e);
-            throw new CloudRuntimeException("Failed to generate keystore and get CSR from the host/agent id=" + host.getId());
+            logger.error("Host/agent is not available or operation timed out, failed to setup keystore and generate CSR for host/agent {}, due to: ", host, e);
+            throw new CloudRuntimeException(String.format("Failed to generate keystore and get CSR from the host/agent %s", host));
         }
     }
 
@@ -206,7 +206,7 @@ public class CAManagerImpl extends ManagerBase implements CAManager {
         if (sshAccessDetails != null && !sshAccessDetails.isEmpty()) {
             cmd.setAccessDetail(sshAccessDetails);
         }
-        CallContext.current().setEventDetails("generating keystore and CSR for host id: " + host.getId());
+        CallContext.current().setEventDetails("generating keystore and CSR for Host with ID: " + host.getUuid());
         final SetupKeystoreAnswer answer = (SetupKeystoreAnswer)agentManager.send(host.getId(), cmd);
         return answer.getCsr();
     }
@@ -223,22 +223,22 @@ public class CAManagerImpl extends ManagerBase implements CAManager {
         if (sshAccessDetails != null && !sshAccessDetails.isEmpty()) {
             cmd.setAccessDetail(sshAccessDetails);
         }
-        CallContext.current().setEventDetails("deploying certificate for host id: " + host.getId());
+        CallContext.current().setEventDetails("deploying certificate for Host with ID: " + host.getUuid());
         final SetupCertificateAnswer answer = (SetupCertificateAnswer)agentManager.send(host.getId(), cmd);
         if (answer.getResult()) {
-            CallContext.current().setEventDetails("successfully deployed certificate for host id: " + host.getId());
+            CallContext.current().setEventDetails("successfully deployed certificate for Host with ID: " + host.getUuid());
         } else {
-            CallContext.current().setEventDetails("failed to deploy certificate for host id: " + host.getId());
+            CallContext.current().setEventDetails("failed to deploy certificate for Host with ID: " + host.getUuid());
         }
 
         if (answer.getResult()) {
             getActiveCertificatesMap().put(host.getPrivateIpAddress(), certificate.getClientCertificate());
             if (sshAccessDetails == null && reconnect != null && reconnect) {
-                logger.info(String.format("Successfully setup certificate on host, reconnecting with agent with id=%d, name=%s, address=%s", host.getId(), host.getName(), host.getPublicIpAddress()));
+                logger.info("Successfully setup certificate on host, reconnecting with agent [{}] with address={}", host, host.getPublicIpAddress());
                 try {
                     agentManager.reconnect(host.getId());
                 } catch (AgentUnavailableException | CloudRuntimeException e) {
-                    logger.debug("Error when reconnecting to host: " + host.getUuid(), e);
+                    logger.debug("Error when reconnecting to host: {}", host, e);
                 }
             }
             return true;

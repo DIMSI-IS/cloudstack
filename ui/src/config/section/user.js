@@ -17,6 +17,7 @@
 
 import { shallowRef, defineAsyncComponent } from 'vue'
 import store from '@/store'
+import { i18n } from '@/locales'
 
 export default {
   name: 'accountuser',
@@ -26,13 +27,31 @@ export default {
   hidden: true,
   permission: ['listUsers'],
   searchFilters: () => {
-    var filters = []
+    const filters = ['usersource']
     if (store.getters.userInfo.roletype === 'Admin') {
       filters.push('apikeyaccess')
     }
     return filters
   },
-  columns: ['username', 'state', 'firstname', 'lastname', 'email', 'account', 'domain'],
+  columns: [
+    'username', 'state', 'firstname', 'lastname',
+    'email', 'account', 'domain',
+    {
+      field: 'userSource',
+      customTitle: 'userSource',
+      userSource: (record) => {
+        let { usersource: source } = record
+
+        if (source === 'saml2') {
+          source = 'saml'
+        } else if (source === 'saml2disabled') {
+          source = 'saml.disabled'
+        }
+
+        return i18n.global.t(`label.${source}`)
+      }
+    }
+  ],
   details: ['username', 'id', 'firstname', 'lastname', 'email', 'usersource', 'timezone', 'rolename', 'roletype', 'is2faenabled', 'account', 'domain', 'created'],
   tabs: [
     {
@@ -65,6 +84,24 @@ export default {
     },
     {
       api: 'updateUser',
+      icon: 'redo-outlined',
+      label: 'label.change.password.reset',
+      message: 'message.change.password.reset',
+      dataView: true,
+      args: ['passwordchangerequired'],
+      mapping: {
+        passwordchangerequired: {
+          value: (record) => { return true }
+        }
+      },
+      popup: true,
+      show: (record, store) => {
+        return ['Admin', 'DomainAdmin'].includes(store.userInfo.roletype) && !record.isdefault &&
+          store.userInfo.id !== record.id && record.state === 'enabled' && record.usersource === 'native'
+      }
+    },
+    {
+      api: 'updateUser',
       icon: 'key-outlined',
       label: 'label.action.change.password',
       dataView: true,
@@ -86,9 +123,10 @@ export default {
       message: 'message.enable.user',
       dataView: true,
       show: (record, store) => {
-        return ['Admin', 'DomainAdmin'].includes(store.userInfo.roletype) && !record.isdefault &&
-          !(record.domain === 'ROOT' && record.account === 'admin' && record.accounttype === 1) &&
-          ['disabled', 'locked'].includes(record.state)
+        if (!['disabled', 'locked'].includes(record.state) || record.isdefault || !['Admin', 'DomainAdmin'].includes(store.userInfo.roletype)) {
+          return false
+        }
+        return ![1, 4].includes(record.accounttype) || store.userInfo.roletype === 'Admin'
       }
     },
     {
@@ -98,9 +136,10 @@ export default {
       message: 'message.disable.user',
       dataView: true,
       show: (record, store) => {
-        return ['Admin', 'DomainAdmin'].includes(store.userInfo.roletype) && !record.isdefault &&
-          !(record.domain === 'ROOT' && record.account === 'admin' && record.accounttype === 1) &&
-          record.state === 'enabled'
+        if (record.state !== 'enabled' || record.isdefault || !['Admin', 'DomainAdmin'].includes(store.userInfo.roletype)) {
+          return false
+        }
+        return ![1, 4].includes(record.accounttype) || (store.userInfo.roletype === 'Admin' && record.id !== store.userInfo.id)
       }
     },
     {
@@ -112,9 +151,10 @@ export default {
       dataView: true,
       popup: true,
       show: (record, store) => {
-        return ['Admin', 'DomainAdmin'].includes(store.userInfo.roletype) && !record.isdefault &&
-          !(record.domain === 'ROOT' && record.account === 'admin' && record.accounttype === 1) &&
-          record.state === 'enabled'
+        if (record.state !== 'enabled' || record.isdefault || !['Admin', 'DomainAdmin'].includes(store.userInfo.roletype)) {
+          return false
+        }
+        return ![1, 4].includes(record.accounttype) || (store.userInfo.roletype === 'Admin' && record.id !== store.userInfo.id)
       }
     },
     {

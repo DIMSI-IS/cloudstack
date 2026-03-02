@@ -29,6 +29,7 @@ import javax.naming.ConfigurationException;
 import org.apache.cloudstack.api.command.QuotaBalanceCmd;
 import org.apache.cloudstack.api.command.QuotaConfigureEmailCmd;
 import org.apache.cloudstack.api.command.QuotaCreditsCmd;
+import org.apache.cloudstack.api.command.QuotaCreditsListCmd;
 import org.apache.cloudstack.api.command.QuotaEmailTemplateListCmd;
 import org.apache.cloudstack.api.command.QuotaEmailTemplateUpdateCmd;
 import org.apache.cloudstack.api.command.QuotaEnabledCmd;
@@ -61,6 +62,7 @@ import com.cloud.configuration.Config;
 import com.cloud.domain.dao.DomainDao;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.exception.PermissionDeniedException;
+import com.cloud.server.ManagementService;
 import com.cloud.user.Account;
 import com.cloud.user.AccountVO;
 import com.cloud.user.dao.AccountDao;
@@ -87,6 +89,8 @@ public class QuotaServiceImpl extends ManagerBase implements QuotaService, Confi
 
     private TimeZone _usageTimezone;
 
+    private boolean jsInterpretationEnabled = false;
+
     public QuotaServiceImpl() {
         super();
     }
@@ -97,6 +101,8 @@ public class QuotaServiceImpl extends ManagerBase implements QuotaService, Confi
 
         String timeZoneStr = ObjectUtils.defaultIfNull(_configDao.getValue(Config.UsageAggregationTimezone.toString()), "GMT");
         _usageTimezone = TimeZone.getTimeZone(timeZoneStr);
+
+        jsInterpretationEnabled = ManagementService.JsInterpretationEnabled.value();
 
         return true;
     }
@@ -115,6 +121,7 @@ public class QuotaServiceImpl extends ManagerBase implements QuotaService, Confi
         cmdList.add(QuotaTariffListCmd.class);
         cmdList.add(QuotaTariffUpdateCmd.class);
         cmdList.add(QuotaCreditsCmd.class);
+        cmdList.add(QuotaCreditsListCmd.class);
         cmdList.add(QuotaEmailTemplateListCmd.class);
         cmdList.add(QuotaEmailTemplateUpdateCmd.class);
         cmdList.add(QuotaTariffCreateCmd.class);
@@ -286,4 +293,8 @@ public class QuotaServiceImpl extends ManagerBase implements QuotaService, Confi
         }
     }
 
+    @Override
+    public boolean isJsInterpretationEnabled() {
+        return jsInterpretationEnabled;
+    }
 }

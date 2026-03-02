@@ -54,7 +54,7 @@ public class StopKubernetesClusterCmd extends BaseAsyncCmd {
     /////////////////////////////////////////////////////
     @Parameter(name = ApiConstants.ID, type = CommandType.UUID,
             entityType = KubernetesClusterResponse.class, required = true,
-            description = "the ID of the Kubernetes cluster")
+            description = "The ID of the Kubernetes cluster")
     private Long id;
 
     /////////////////////////////////////////////////////
@@ -100,7 +100,8 @@ public class StopKubernetesClusterCmd extends BaseAsyncCmd {
     public void execute() throws ServerApiException, ConcurrentOperationException {
         try {
             if (!kubernetesClusterService.stopKubernetesCluster(this)) {
-                throw new ServerApiException(ApiErrorCode.INTERNAL_ERROR, String.format("Failed to start Kubernetes cluster ID: %d", getId()));
+                KubernetesCluster cluster = kubernetesClusterService.findById(getId());
+                throw new ServerApiException(ApiErrorCode.INTERNAL_ERROR, String.format("Failed to stop Kubernetes cluster %s with id %d", cluster, getId()));
             }
             final SuccessResponse response = new SuccessResponse(getCommandName());
             setResponseObject(response);

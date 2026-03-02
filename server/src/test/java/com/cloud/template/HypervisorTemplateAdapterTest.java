@@ -49,7 +49,6 @@ import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.events.Event;
 import org.apache.cloudstack.framework.events.EventDistributor;
 import org.apache.cloudstack.framework.messagebus.MessageBus;
-import org.apache.cloudstack.secstorage.heuristics.HeuristicType;
 import org.apache.cloudstack.storage.datastore.db.TemplateDataStoreDao;
 import org.apache.cloudstack.storage.datastore.db.TemplateDataStoreVO;
 import org.apache.cloudstack.storage.heuristics.HeuristicRuleHelper;
@@ -339,7 +338,7 @@ public class HypervisorTemplateAdapterTest {
 
         Mockito.when(templateProfileMock.getZoneIdList()).thenReturn(zoneIds);
         Mockito.doReturn(null).when(_adapter).getImageStoresThrowsExceptionIfNotFound(Mockito.any(Long.class), Mockito.any(TemplateProfile.class));
-        Mockito.doReturn(null).when(_adapter).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
+        Mockito.doReturn(null).when(_templateMgr).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
         Mockito.doNothing().when(_adapter).standardImageStoreAllocation(Mockito.isNull(), Mockito.any(VMTemplateVO.class));
 
         _adapter.createTemplateWithinZones(templateProfileMock, vmTemplateVOMock);
@@ -355,7 +354,7 @@ public class HypervisorTemplateAdapterTest {
 
         Mockito.when(templateProfileMock.getZoneIdList()).thenReturn(zoneIds);
         Mockito.doReturn(null).when(_adapter).getImageStoresThrowsExceptionIfNotFound(Mockito.any(Long.class), Mockito.any(TemplateProfile.class));
-        Mockito.doReturn(null).when(_adapter).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
+        Mockito.doReturn(null).when(_templateMgr).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
         Mockito.doNothing().when(_adapter).standardImageStoreAllocation(Mockito.isNull(), Mockito.any(VMTemplateVO.class));
 
         _adapter.createTemplateWithinZones(templateProfileMock, vmTemplateVOMock);
@@ -371,7 +370,7 @@ public class HypervisorTemplateAdapterTest {
         List<Long> zoneIds = List.of(1L);
 
         Mockito.when(templateProfileMock.getZoneIdList()).thenReturn(zoneIds);
-        Mockito.doReturn(dataStoreMock).when(_adapter).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
+        Mockito.doReturn(dataStoreMock).when(_templateMgr).verifyHeuristicRulesForZone(Mockito.any(VMTemplateVO.class), Mockito.anyLong());
         Mockito.doNothing().when(_adapter).validateSecondaryStorageAndCreateTemplate(Mockito.any(List.class), Mockito.any(VMTemplateVO.class), Mockito.isNull());
 
         _adapter.createTemplateWithinZones(templateProfileMock, vmTemplateVOMock);
@@ -410,26 +409,6 @@ public class HypervisorTemplateAdapterTest {
     }
 
     @Test
-    public void verifyHeuristicRulesForZoneTestTemplateIsISOFormatShouldCheckForISOHeuristicType() {
-        VMTemplateVO vmTemplateVOMock = Mockito.mock(VMTemplateVO.class);
-
-        Mockito.when(vmTemplateVOMock.getFormat()).thenReturn(ImageFormat.ISO);
-        _adapter.verifyHeuristicRulesForZone(vmTemplateVOMock, 1L);
-
-        Mockito.verify(heuristicRuleHelperMock, Mockito.times(1)).getImageStoreIfThereIsHeuristicRule(1L, HeuristicType.ISO, vmTemplateVOMock);
-    }
-
-    @Test
-    public void verifyHeuristicRulesForZoneTestTemplateNotISOFormatShouldCheckForTemplateHeuristicType() {
-        VMTemplateVO vmTemplateVOMock = Mockito.mock(VMTemplateVO.class);
-
-        Mockito.when(vmTemplateVOMock.getFormat()).thenReturn(ImageFormat.QCOW2);
-        _adapter.verifyHeuristicRulesForZone(vmTemplateVOMock, 1L);
-
-        Mockito.verify(heuristicRuleHelperMock, Mockito.times(1)).getImageStoreIfThereIsHeuristicRule(1L, HeuristicType.TEMPLATE, vmTemplateVOMock);
-    }
-
-    @Test
     public void isZoneAndImageStoreAvailableTestZoneIdIsNullShouldReturnFalse() {
         DataStore dataStoreMock = Mockito.mock(DataStore.class);
         Long zoneId = null;
@@ -451,12 +430,11 @@ public class HypervisorTemplateAdapterTest {
         DataCenterVO dataCenterVOMock = null;
 
         Mockito.when(_dcDao.findById(Mockito.anyLong())).thenReturn(dataCenterVOMock);
-        Mockito.when(dataStoreMock.getId()).thenReturn(2L);
 
         boolean result = _adapter.isZoneAndImageStoreAvailable(dataStoreMock, zoneId, zoneSet, isTemplatePrivate);
 
-        Mockito.verify(loggerMock, Mockito.times(1)).warn(String.format("Unable to find zone by id [%s], so skip downloading template to its image store [%s].",
-                zoneId, dataStoreMock.getId()));
+        Mockito.verify(loggerMock, Mockito.times(1)).warn("Unable to find zone by id [{}], so skip downloading template to its image store [{}].",
+                zoneId, dataStoreMock);
         Assert.assertFalse(result);
     }
 
@@ -470,11 +448,10 @@ public class HypervisorTemplateAdapterTest {
 
         Mockito.when(_dcDao.findById(Mockito.anyLong())).thenReturn(dataCenterVOMock);
         Mockito.when(dataCenterVOMock.getAllocationState()).thenReturn(Grouping.AllocationState.Disabled);
-        Mockito.when(dataStoreMock.getId()).thenReturn(2L);
 
         boolean result = _adapter.isZoneAndImageStoreAvailable(dataStoreMock, zoneId, zoneSet, isTemplatePrivate);
 
-        Mockito.verify(loggerMock, Mockito.times(1)).info(String.format("Zone [%s] is disabled. Skip downloading template to its image store [%s].", zoneId, dataStoreMock.getId()));
+        Mockito.verify(loggerMock, Mockito.times(1)).info("Zone [{}] is disabled. Skip downloading template to its image store [{}].", dataCenterVOMock, dataStoreMock);
         Assert.assertFalse(result);
     }
 
@@ -488,13 +465,12 @@ public class HypervisorTemplateAdapterTest {
 
         Mockito.when(_dcDao.findById(Mockito.anyLong())).thenReturn(dataCenterVOMock);
         Mockito.when(dataCenterVOMock.getAllocationState()).thenReturn(Grouping.AllocationState.Enabled);
-        Mockito.when(dataStoreMock.getId()).thenReturn(2L);
         Mockito.when(statsCollectorMock.imageStoreHasEnoughCapacity(any(DataStore.class))).thenReturn(false);
 
         boolean result = _adapter.isZoneAndImageStoreAvailable(dataStoreMock, zoneId, zoneSet, isTemplatePrivate);
 
-        Mockito.verify(loggerMock, times(1)).info(String.format("Image store doesn't have enough capacity. Skip downloading template to this image store [%s].",
-                dataStoreMock.getId()));
+        Mockito.verify(loggerMock, times(1)).info("Image store doesn't have enough capacity. Skip downloading template to this image store [{}].",
+                dataStoreMock);
         Assert.assertFalse(result);
     }
 
