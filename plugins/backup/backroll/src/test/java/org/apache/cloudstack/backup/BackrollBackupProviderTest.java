@@ -44,7 +44,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class BackrollBackupProviderTest {
@@ -336,27 +339,13 @@ public class BackrollBackupProviderTest {
         vm.setDataCenterId(4L);
         vm.setBackupOfferingId(5L);
 
-        Backup.Metric metric = null;
-
         Mockito.doThrow(new BackrollHttpClient.BackrollHttpClientException(new Exception())).when(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
 
-        // backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm, metric);
-    }
+        // A failure while fetching metrics must not prevent the backup entry from being created
+        Backup result = backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm);
 
-    @Test
-    public void createNewBackupEntryForRestorePoint_IOException_Test() throws BackrollHttpClientException, IOException {
-
-        RestorePoint restorePoint = new RestorePoint("restore-500", new Date(), "INCREMENTAL");
-
-        VMInstanceVO vm = new VMInstanceVO();
-        vm.setUuid("vm-uuid-500");
-        vm.setDataCenterId(5L);
-        vm.setBackupOfferingId(6L);
-
-        Backup.Metric metric = null;
-
-        Mockito.doThrow(new IOException("IO Error")).when(clientMock).getBackupMetrics(vm.getUuid(), restorePoint.getId());
-
-        // backupProvider.createNewBackupEntryForRestorePoint(restorePoint, vm, metric);
+        assertNotNull(result);
+        assertEquals(restorePoint.getId(), result.getExternalId());
+        Mockito.verify(backupDao).persist(Mockito.any(BackupVO.class));
     }
 }

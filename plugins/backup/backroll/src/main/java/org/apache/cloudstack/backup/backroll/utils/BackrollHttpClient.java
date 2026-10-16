@@ -155,6 +155,8 @@ public class BackrollHttpClient {
                 default:
                     throw new NotOkBodyException();
             }
+        } catch (NotOkBodyException exception) {
+            throw exception;
         } catch (Exception exception) {
             logger.error(exception);
             exception.printStackTrace();

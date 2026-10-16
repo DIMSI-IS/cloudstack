@@ -38,7 +38,12 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -47,9 +52,16 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class BackrollHttpClientTest {
 
@@ -268,20 +280,22 @@ public class BackrollHttpClientTest {
 
     @Test
     public void testAuthenticationFailure() throws Exception {
+        defaultTestHttpClient("/test");
         doReturn(false).when(backupHttpClient).isAuthenticated();
-        // TODO
-        // doNothing().when(backupHttpClient).login();
+
+        // Not authenticated: ensureLoggedIn() must log in, which is a single POST on the login route
         backupHttpClient.ensureLoggedIn();
-        // TODO
-        // verify(backupHttpClient).login();
+
+        verify(httpClient, times(1)).execute(Mockito.any(HttpPost.class));
+        verify(backupHttpClient, times(1)).okBody(response);
     }
 
-    @Test()
+    @Test
     public void testLoginFailure() throws Exception {
         doReturn(false).when(backupHttpClient).isAuthenticated();
-        // TODO
-        // doThrow(BackrollHttpClient.BackrollHttpClientException.class).when(backupHttpClient).login();
-        backupHttpClient.ensureLoggedIn();
+        doThrow(new BackrollHttpClientException(new Exception("Backroll unreachable"))).when(backupHttpClient).createHttpClient();
+
+        assertThrows(BackrollHttpClientException.class, () -> backupHttpClient.ensureLoggedIn());
     }
 
     @Test

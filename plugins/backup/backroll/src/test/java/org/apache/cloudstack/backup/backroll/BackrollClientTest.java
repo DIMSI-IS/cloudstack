@@ -54,7 +54,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -153,7 +155,7 @@ public class BackrollClientTest {
     @Test
     public void checkBackupTaskStatusSuccess_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
         String backupResponse = "{\"state\":\"SUCCESS\",\"info\":\"test\"}";
-        doReturn(backupResponse).when(backrollHttpClientMock).getWait(Mockito.matches(".*status/.*"));
+        doReturn(backupResponse).when(backrollHttpClientMock).get(Mockito.matches(".*status/.*"));
 
         BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
 
@@ -164,10 +166,10 @@ public class BackrollClientTest {
     @Test
     public void checkBackupTaskStatus_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
         String backupResponse = "{\"state\":\"PENDING\",\"current\":0,\"total\":1,\"status\":\"Pending...\"}";
-        doReturn(backupResponse).when(backrollHttpClientMock).getWait(Mockito.matches(".*/status/.*"));
+        doReturn(backupResponse).when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
 
         BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
- 
+
         assertEquals(TaskState.PENDING, status.getState());
     }
 
@@ -194,7 +196,7 @@ public class BackrollClientTest {
 
         String response = client.startBackupJob("dummyJobId");
 
-        assertEquals("/status/f32092e4-3e8a-461b-8733-ed93e23fa782", response);
+        assertEquals("f32092e4-3e8a-461b-8733-ed93e23fa782", response);
     }
 
     @Test
