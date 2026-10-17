@@ -348,4 +348,38 @@ public class BackrollBackupProviderTest {
         assertEquals(restorePoint.getId(), result.getExternalId());
         Mockito.verify(backupDao).persist(Mockito.any(BackupVO.class));
     }
+
+    @Test
+    public void syncBackupMetrics_SetsEachBackupOwnSize_Test() throws BackrollHttpClientException {
+        VMInstanceVO vm = new VMInstanceVO();
+        vm.setUuid("vm-uuid-sync");
+        Mockito.doReturn(Arrays.asList(vm)).when(vmInstanceDao).listByZoneId(2L);
+
+        BackupVO backup1 = new BackupVO();
+        backup1.setExternalId("restore-1");
+        backup1.setStatus(Backup.Status.BackedUp);
+        BackupVO backup2 = new BackupVO();
+        backup2.setExternalId("restore-2");
+        backup2.setStatus(Backup.Status.BackedUp);
+        Mockito.doReturn(Arrays.asList(backup1, backup2)).when(backupDao).listByVmId(Mockito.any(), Mockito.any());
+
+        Mockito.doReturn(Arrays.asList(new RestorePoint("restore-1", new Date(), "INCREMENTAL"), new RestorePoint("restore-2", new Date(), "INCREMENTAL")))
+                .when(clientMock).listRestorePoints("vm-uuid-sync");
+        Mockito.doReturn(new BackrollBackupMetrics(100L, 10L)).when(clientMock).getBackupMetrics("vm-uuid-sync", "restore-1");
+        Mockito.doReturn(new BackrollBackupMetrics(200L, 20L)).when(clientMock).getBackupMetrics("vm-uuid-sync", "restore-2");
+
+        backupProvider.syncBackupMetrics(2L);
+
+        // Each backup must get its own metrics, not the running total of the previous restore points
+        assertEquals(Long.valueOf(100L), backup1.getSize());
+        assertEquals(Long.valueOf(10L), backup1.getProtectedSize());
+        assertEquals(Long.valueOf(200L), backup2.getSize());
+        assertEquals(Long.valueOf(20L), backup2.getProtectedSize());
+    }
+
+    @Test
+    public void supportsInstanceFromBackup_Test() {
+        // restoreBackupToVM() is not implemented, so the feature must not be advertised
+        assertFalse(backupProvider.supportsInstanceFromBackup());
+    }
 }

@@ -238,8 +238,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
                         if (backupToFind != null) {
                             BackupVO backupToUpdate = ((BackupVO)backupToFind);
-                            backupToUpdate.setProtectedSize(usedSize);
-                            backupToUpdate.setSize(dataSize);
+                            backupToUpdate.setProtectedSize(backupMetrics.getDeduplicated());
+                            backupToUpdate.setSize(backupMetrics.getSize());
                             backupDao.persist(backupToUpdate);
                         }
 
@@ -442,7 +442,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
     @Override
     public boolean supportsInstanceFromBackup() {
-        return true;
+        return false;
     }
 
     @Override

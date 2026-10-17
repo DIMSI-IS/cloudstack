@@ -243,6 +243,21 @@ public class BackrollClientTest {
     }
 
     @Test
+    public void getBackupOfferings_NoPolicy_Test() throws BackrollHttpClientException {
+        BackupPoliciesResponse emptyPoliciesResponse = new BackupPoliciesResponse();
+        emptyPoliciesResponse.backupPolicies = Arrays.asList();
+
+        BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
+        backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).getParse(Mockito.matches(".*/backup_policies.*"), Mockito.any());
+        doReturn(emptyPoliciesResponse).when(backrollHttpClientMock).getWaitParse(Mockito.matches("/status/f32092e4-3e8a-461b-8733-ed93e23fa782"), Mockito.any());
+
+        List<BackupOffering> response = client.getBackupOfferings();
+
+        assertTrue(response.isEmpty());
+    }
+
+    @Test
     public void listRestorePoints_Test() throws BackrollHttpClientException, IOException {
         String vmId = "vm-123";
 

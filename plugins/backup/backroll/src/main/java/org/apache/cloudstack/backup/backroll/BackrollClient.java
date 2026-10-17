@@ -90,7 +90,10 @@ public class BackrollClient {
         logger.info("Trying to list backroll backup policies");
         final List<BackupOffering> policies = new ArrayList<>();
         BackupPoliciesResponse backupPoliciesResponse = backrollHttpClient.getWaitParse(urlTask, BackupPoliciesResponse.class);
-        logger.info("BackrollClient:getBackupOfferings:Apres Parse:  " + backupPoliciesResponse.backupPolicies.get(0).name);
+        if (backupPoliciesResponse.backupPolicies == null) {
+            return policies;
+        }
+        logger.info("BackrollClient:getBackupOfferings: {} backup policies found", backupPoliciesResponse.backupPolicies.size());
         for (final BackrollBackupPolicyResponse policy : backupPoliciesResponse.backupPolicies) {
             policies.add(new BackrollOffering(policy.name, policy.id));
         }
