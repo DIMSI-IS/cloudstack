@@ -58,6 +58,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class BackrollHttpClient {
     private static final String AUTH_LOGIN = "/auth/cloudstack/login";
     private static final String AUTH_TEST = "/auth/cloudstack/test";
+    private static final int DEFAULT_WAIT_SECONDS = 120;
+    private static final int DEFAULT_POLL_INTERVAL_SECONDS = 10;
 
     private URI apiURI;
     private String backrollToken = null;
@@ -65,6 +67,9 @@ public class BackrollHttpClient {
     private String password = null;
     private RequestConfig config = null;
     private boolean validateCertificate = false;
+    private int restoreWaitSeconds = DEFAULT_WAIT_SECONDS;
+    // Not private so that tests can avoid really sleeping between two polls
+    int pollIntervalSeconds = DEFAULT_POLL_INTERVAL_SECONDS;
 
     private Logger logger = LogManager.getLogger(BackrollClient.class);
 
@@ -83,6 +88,7 @@ public class BackrollHttpClient {
         backrollHttpClientProvider.appname = appname;
         backrollHttpClientProvider.password = password;
         backrollHttpClientProvider.validateCertificate = validateCertificate;
+        backrollHttpClientProvider.restoreWaitSeconds = restoreTimeout;
 
         backrollHttpClientProvider.config = RequestConfig.custom()
                 .setConnectTimeout(timeout * 1000)
@@ -115,7 +121,6 @@ public class BackrollHttpClient {
             }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -131,6 +136,44 @@ public class BackrollHttpClient {
     }
 
     public static class NotOkBodyException extends Exception {
+        private final int statusCode;
+        private final String body;
+
+        public NotOkBodyException() {
+            this(0, null);
+        }
+
+        public NotOkBodyException(final int statusCode, final String body) {
+            super("Unexpected HTTP status " + statusCode);
+            this.statusCode = statusCode;
+            this.body = body;
+        }
+
+        public int getStatusCode() {
+            return statusCode;
+        }
+
+        /**
+         * @return the body of the response, if it could be read. Backroll puts the state of a failed task in it.
+         */
+        public String getBody() {
+            return body;
+        }
+    }
+
+    private String readBodyQuietly(final CloseableHttpResponse response) {
+        final HttpEntity entity = response.getEntity();
+        if (entity == null) {
+            return null;
+        }
+        try {
+            return EntityUtils.toString(entity);
+        } catch (Exception exception) {
+            logger.debug("Unable to read the body of the response", exception);
+            return null;
+        } finally {
+            EntityUtils.consumeQuietly(entity);
+        }
     }
 
     public String okBody(final CloseableHttpResponse response) throws BackrollHttpClientException, NotOkBodyException {
@@ -153,13 +196,12 @@ public class BackrollHttpClient {
                         EntityUtils.consumeQuietly(bodyEntity);
                     }
                 default:
-                    throw new NotOkBodyException();
+                    throw new NotOkBodyException(statusCode, readBodyQuietly(response));
             }
         } catch (NotOkBodyException exception) {
             throw exception;
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -170,7 +212,6 @@ public class BackrollHttpClient {
             return new ObjectMapper().readValue(json, classOfT);
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -201,7 +242,6 @@ public class BackrollHttpClient {
             }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -222,14 +262,12 @@ public class BackrollHttpClient {
                     return true;
                 } catch (NotOkBodyException exception) {
                     logger.error(exception);
-                    exception.printStackTrace();
                 }
             }
 
             return false;
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -263,7 +301,6 @@ public class BackrollHttpClient {
             }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -282,7 +319,6 @@ public class BackrollHttpClient {
             }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
@@ -305,29 +341,40 @@ public class BackrollHttpClient {
             }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }
 
     public String getWait(String path) throws BackrollHttpClientException {
-        try {
-            final int maxAttempts = 12; // 2 minutes
+        return getWait(path, DEFAULT_WAIT_SECONDS);
+    }
 
-            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    /**
+     * Same as {@link #getWait(String)} but waits as long as the restore timeout, since a restore can be much longer than other tasks.
+     */
+    public String getWaitRestore(String path) throws BackrollHttpClientException {
+        return getWait(path, restoreWaitSeconds);
+    }
+
+    private String getWait(String path, int maxWaitSeconds) throws BackrollHttpClientException {
+        try {
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(maxWaitSeconds);
+
+            while (true) {
                 final String body = get(path);
-                if (!body.contains(TaskState.PENDING)) {
+                if (!TaskState.isRunning(TaskState.of(body))) {
                     logger.debug("waitGetWithoutParseResponse : result {}", body);
                     return body;
                 }
 
-                TimeUnit.SECONDS.sleep(10);
-            }
+                if (System.nanoTime() >= deadline) {
+                    throw new Exception("Timeout of " + maxWaitSeconds + " seconds reached while waiting for a non-pending response.");
+                }
 
-            throw new Exception("Max attempts reached while waiting for a non-pending response.");
+                TimeUnit.SECONDS.sleep(pollIntervalSeconds);
+            }
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollHttpClientException(exception);
         }
     }

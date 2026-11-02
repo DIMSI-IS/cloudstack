@@ -41,6 +41,7 @@ import org.apache.cloudstack.backup.backroll.model.response.policy.BackrollBacku
 import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPoliciesResponse;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.NotOkBodyException;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.json.JSONObject;
@@ -55,10 +56,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 public class BackrollClientTest {
@@ -174,16 +178,70 @@ public class BackrollClientTest {
     }
 
     @Test
+    public void checkBackupTaskStatus_StateNamesInPayload_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
+        // The state is SUCCESS: state names appearing in other fields must not change how the response is read
+        String backupResponse = "{\"state\":\"SUCCESS\",\"info\":\"vm-PENDING-FAILURE-backup\"}";
+        doReturn(backupResponse).when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+
+        BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
+
+        assertEquals(TaskState.SUCCESS, status.getState());
+        assertEquals("vm-PENDING-FAILURE-backup", status.getInfo());
+    }
+
+    @Test
+    public void checkBackupTaskStatus_Progress_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
+        String backupResponse = "{\"state\":\"PROGRESS\",\"status\":\"In progress...\"}";
+        doReturn(backupResponse).when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+
+        BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
+
+        assertEquals(TaskState.PROGRESS, status.getState());
+    }
+
+    @Test
+    public void checkBackupTaskStatus_FailedTask_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
+        // Backroll answers with an HTTP error status and the state of the task in the body when the task failed
+        String body = "{\"detail\":{\"state\":\"FAILURE\",\"current\":1,\"total\":1,\"status\":\"boom\"}}";
+        doThrow(new BackrollHttpClientException(new NotOkBodyException(500, body))).when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+
+        BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
+
+        assertEquals(TaskState.FAILURE, status.getState());
+    }
+
+    @Test
+    public void checkBackupTaskStatus_HttpError_Test() throws IOException, BackrollHttpClientException {
+        doThrow(new BackrollHttpClientException(new NotOkBodyException(502, "Bad Gateway"))).when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+
+        assertThrows(BackrollClientException.class, () -> client.checkBackupTaskStatus("dummytaskid"));
+    }
+
+    @Test
     public void restoreVMFromBackup_Test() throws IOException, BackrollHttpClientException {
         BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
         backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
-        String resultMock = "SUCCESS WOW YOUHOU";
+        String resultMock = "{\"state\":\"SUCCESS\",\"info\":\"restored\"}";
         doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).post(Mockito.matches(".*/tasks/restore/.*"), Mockito.any(JSONObject.class), Mockito.any());
-        doReturn(resultMock).when(backrollHttpClientMock).getWait(Mockito.anyString());
+        doReturn(resultMock).when(backrollHttpClientMock).getWaitRestore(Mockito.anyString());
 
         Boolean isRestoreOk = client.restoreVMFromBackup("dummyVMId", "dummyBackUpName");
 
         assertTrue(isRestoreOk);
+    }
+
+    @Test
+    public void restoreVMFromBackup_Failure_Test() throws IOException, BackrollHttpClientException {
+        BackrollTaskRequestResponse backrollTaskReqResponseMock = new BackrollTaskRequestResponse();
+        backrollTaskReqResponseMock.location = "/api/v1/status/f32092e4-3e8a-461b-8733-ed93e23fa782";
+        // A failed restore whose message contains the word SUCCESS must not be reported as a success
+        String resultMock = "{\"state\":\"FAILURE\",\"info\":\"previous restore SUCCESS but this one failed\"}";
+        doReturn(backrollTaskReqResponseMock).when(backrollHttpClientMock).post(Mockito.matches(".*/tasks/restore/.*"), Mockito.any(JSONObject.class), Mockito.any());
+        doReturn(resultMock).when(backrollHttpClientMock).getWaitRestore(Mockito.anyString());
+
+        Boolean isRestoreOk = client.restoreVMFromBackup("dummyVMId", "dummyBackUpName");
+
+        assertFalse(isRestoreOk);
     }
 
     @Test

@@ -38,6 +38,7 @@ import org.apache.cloudstack.backup.backroll.model.response.policy.BackrollBacku
 import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPoliciesResponse;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
+import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.NotOkBodyException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -122,11 +123,13 @@ public class BackrollClient {
                 jsonBody, BackrollTaskRequestResponse.class);
         String urlToRequest = requestResponse.location.replace("/api/v1", "");
 
-        String result = backrollHttpClient.getWait(urlToRequest);
-        if (result.contains("SUCCESS")) {
+        String result = backrollHttpClient.getWaitRestore(urlToRequest);
+        if (TaskState.SUCCESS.equals(TaskState.of(result))) {
             logger.debug("RESTORE SUCCESS content : " + result);
             logger.debug("RESTORE SUCCESS");
             isRestoreOk = true;
+        } else {
+            logger.error("RESTORE of backup {} for vm {} did not succeed, Backroll answered: {}", backupName, vmId, result);
         }
 
         return isRestoreOk;
@@ -138,21 +141,31 @@ public class BackrollClient {
 
             BackrollTaskStatus status = new BackrollTaskStatus();
 
-            String backupResponse = backrollHttpClient.get("/status/" + taskId);
+            String backupResponse;
+            try {
+                backupResponse = backrollHttpClient.get("/status/" + taskId);
+            } catch (BackrollHttpClientException exception) {
+                // Backroll answers with an HTTP error status when the task failed, and the task state is in the body
+                if (exception.getCause() instanceof NotOkBodyException
+                        && TaskState.FAILURE.equals(TaskState.of(((NotOkBodyException)exception.getCause()).getBody()))) {
+                    status.setState(TaskState.FAILURE);
+                    return status;
+                }
+                throw exception;
+            }
 
-        if (backupResponse.contains(TaskState.FAILURE) || backupResponse.contains(TaskState.PENDING)) {
-            BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusResponse.class);
-            status.setState(backupStatusRequestResponse.state);
-        } else {
-            BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
-            status.setState(backupStatusSuccessRequestResponse.state);
-            status.setInfo(backupStatusSuccessRequestResponse.info);
-        }
+            if (TaskState.SUCCESS.equals(TaskState.of(backupResponse))) {
+                BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
+                status.setState(backupStatusSuccessRequestResponse.state);
+                status.setInfo(backupStatusSuccessRequestResponse.info);
+            } else {
+                BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusResponse.class);
+                status.setState(backupStatusRequestResponse.state);
+            }
 
             return StringUtils.isEmpty(status.getState()) ? null : status;
         } catch (Exception exception) {
             logger.error(exception);
-            exception.printStackTrace();
             throw new BackrollClientException(exception);
         }
     }

@@ -51,6 +51,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -232,6 +233,30 @@ public class BackrollHttpClientTest {
     }
 
     @Test
+    public void okBody_Test_Error_KeepsStatusAndBody() throws Exception {
+        String body = "{\"detail\":{\"state\":\"FAILURE\"}}";
+        StatusLine statusLine = mock(StatusLine.class);
+        doReturn(statusLine).when(response).getStatusLine();
+        doReturn(HttpStatus.SC_INTERNAL_SERVER_ERROR).when(statusLine).getStatusCode();
+        doReturn(new StringEntity(body, ContentType.APPLICATION_JSON)).when(response).getEntity();
+
+        NotOkBodyException exception = assertThrows(NotOkBodyException.class, () -> backupHttpClient.okBody(response));
+
+        assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        assertEquals(body, exception.getBody());
+    }
+
+    @Test
+    public void getWait_PollsWhileTaskIsInProgress_Test() throws Exception {
+        backupHttpClient.pollIntervalSeconds = 0;
+        String success = "{\"state\":\"SUCCESS\"}";
+        doReturn("{\"state\":\"PENDING\"}", "{\"state\":\"PROGRESS\"}", success).when(backupHttpClient).get("/task");
+
+        assertEquals(success, backupHttpClient.getWait("/task"));
+        verify(backupHttpClient, times(3)).get("/task");
+    }
+
+    @Test
     public void getWaitParse_Test() throws Exception {
         String path = "/test";
         defaultTestHttpClient(path);
@@ -302,7 +327,51 @@ public class BackrollHttpClientTest {
     public void testLoginSuccess() throws Exception {
         doReturn(true).when(backupHttpClient).isAuthenticated();
         backupHttpClient.ensureLoggedIn();
-        // TODO
-        // verify(backupHttpClient, times(0)).login();
+
+        // Already authenticated: no login request must be sent
+        Mockito.verifyNoInteractions(httpClient);
+    }
+
+    @Test
+    public void getWait_ReturnsWhenStateIsNotPending_Test() throws Exception {
+        // The word PENDING appears in the payload but the state is SUCCESS: there is nothing to wait for
+        String body = "{\"state\":\"SUCCESS\",\"info\":\"vm-PENDING-backup\"}";
+        doReturn(body).when(backupHttpClient).get("/task");
+
+        assertEquals(body, backupHttpClient.getWait("/task"));
+        verify(backupHttpClient, times(1)).get("/task");
+    }
+
+    @Test
+    public void getWait_PollsUntilStateIsNotPending_Test() throws Exception {
+        backupHttpClient.pollIntervalSeconds = 0;
+        String pending = "{\"state\":\"PENDING\"}";
+        String success = "{\"state\":\"SUCCESS\"}";
+        doReturn(pending, pending, success).when(backupHttpClient).get("/task");
+
+        assertEquals(success, backupHttpClient.getWait("/task"));
+        verify(backupHttpClient, times(3)).get("/task");
+    }
+
+    @Test
+    public void getWaitRestore_UsesRestoreTimeout_Test() throws Exception {
+        backupHttpClient.pollIntervalSeconds = 0;
+        String pending = "{\"state\":\"PENDING\"}";
+        String success = "{\"state\":\"SUCCESS\"}";
+        // The restore timeout is long enough to wait for as many polls as needed
+        doReturn(pending, pending, pending, pending, pending, success).when(backupHttpClient).get("/task");
+
+        assertEquals(success, backupHttpClient.getWaitRestore("/task"));
+        verify(backupHttpClient, times(6)).get("/task");
+    }
+
+    @Test
+    public void getWaitRestore_Timeout_Test() throws Exception {
+        backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
+                "test-secret", true, 300, 0);
+        backupHttpClient.pollIntervalSeconds = 0;
+        doReturn("{\"state\":\"PENDING\"}").when(backupHttpClient).get("/task");
+
+        assertThrows(BackrollHttpClientException.class, () -> backupHttpClient.getWaitRestore("/task"));
     }
 }
