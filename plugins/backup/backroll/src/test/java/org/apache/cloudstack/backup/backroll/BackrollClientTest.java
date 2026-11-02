@@ -17,7 +17,6 @@
 package org.apache.cloudstack.backup.backroll;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.BackupOffering;
@@ -46,7 +45,6 @@ import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.json.JSONObject;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -70,9 +68,6 @@ public class BackrollClientTest {
 
     @Mock
     private BackrollHttpClient backrollHttpClientMock;
-
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule(9399);
 
     @Before
     public void setUp() throws Exception {

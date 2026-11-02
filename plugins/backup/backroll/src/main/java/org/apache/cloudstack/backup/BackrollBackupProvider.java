@@ -43,6 +43,7 @@ import javax.inject.Inject;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
             "Password for backroll plugin.", true, ConfigKey.Scope.Zone);
 
     private BackrollClient backrollClient;
+    // Settings the client was built with, null when the client was given to the constructor
+    private List<String> backrollClientConfig;
 
     @Inject
     private BackupDao backupDao;
@@ -147,7 +150,8 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
         BackrollClient client = getClient(zoneId);
         for (final VirtualMachine vm : vms) {
-            if (vm == null) {
+            if (vm == null || vm.getBackupOfferingId() == null) {
+                // Nothing to synchronize for a VM which is not assigned to a backup offering
                 continue;
             }
             try {
@@ -245,12 +249,13 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
 
                     }
                 }
-                Metric metric = new Metric(dataSize, usedSize);
+                Metric metric = new Metric(usedSize, dataSize);
                 logger.debug("Metrics for VM [uuid: {}, name: {}] is [backup size: {}, data size: {}].", vm.getUuid(), vm.getInstanceName(), metric.getBackupSize(),
                         metric.getDataSize());
                 metrics.put(vm, metric);
-            } catch (BackrollHttpClientException e) {
-                throw new CloudRuntimeException("Failed to retrieve backup metrics");
+            } catch (Exception e) {
+                // A failure for one VM must not prevent the other VMs from being synchronized
+                logger.error("Failed to retrieve the backup metrics of VM {}", vm.getUuid(), e);
             }
         }
         return metrics;
@@ -330,7 +335,14 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
                     }
                 } catch (BackrollHttpClientException e) {
                     logger.error(e);
-                    throw new CloudRuntimeException("BACKROLL: Failed to delete backup");
+                    if (!forced) {
+                        throw new CloudRuntimeException("BACKROLL: Failed to delete backup");
+                    }
+                }
+
+                if (forced) {
+                    logger.warn("BACKROLL: Backup {} could not be deleted on backroll side, removing it from the database anyway as the deletion is forced.", backup.getUuid());
+                    return deleteBackupInDb(backup);
                 }
             }
         }
@@ -347,15 +359,34 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
         return false;
     }
 
-    private BackrollClient getClient(final Long zoneId) {
+    /**
+     * The client is built from the settings of the plugin and rebuilt when they change, as they are dynamic.
+     * A client given to the constructor is used as is.
+     */
+    synchronized BackrollClient getClient(final Long zoneId) {
         logger.debug("Backroll Provider GetClient with zone id {}", zoneId);
+        if (backrollClient != null && backrollClientConfig == null) {
+            return backrollClient;
+        }
+
+        final String url = BackrollUrlConfigKey.valueIn(zoneId);
+        final String appName = BackrollAppNameConfigKey.valueIn(zoneId);
+        final String password = BackrollPasswordConfigKey.valueIn(zoneId);
+        final List<String> config = Arrays.asList(url, appName, password);
+        if (backrollClient != null && config.equals(backrollClientConfig)) {
+            return backrollClient;
+        }
+
+        if (StringUtils.isAnyEmpty(url, appName, password)) {
+            throw new CloudRuntimeException(String.format("The Backroll plugin is not configured, please set %s, %s and %s", BackrollUrlConfigKey.key(),
+                    BackrollAppNameConfigKey.key(), BackrollPasswordConfigKey.key()));
+        }
+
         try {
-            if (backrollClient == null) {
-                logger.debug("backroll client null - instantiation of new one ");
-                BackrollHttpClient provider = BackrollHttpClient.createProvider(new BackrollHttpClient(), BackrollUrlConfigKey.valueIn(zoneId),
-                        BackrollAppNameConfigKey.valueIn(zoneId), BackrollPasswordConfigKey.valueIn(zoneId), true, 300, 600);
-                backrollClient = new BackrollClient(provider);
-            }
+            logger.debug("backroll client is missing or its settings changed - instantiation of a new one");
+            BackrollHttpClient provider = BackrollHttpClient.createProvider(new BackrollHttpClient(), url, appName, password, true, 300, 600);
+            backrollClient = new BackrollClient(provider);
+            backrollClientConfig = config;
             return backrollClient;
         } catch (URISyntaxException e) {
             logger.error(e);
