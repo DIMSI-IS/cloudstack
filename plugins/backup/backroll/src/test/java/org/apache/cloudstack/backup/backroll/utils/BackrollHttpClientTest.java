@@ -94,7 +94,7 @@ public class BackrollHttpClientTest {
     public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
         backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
-                "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", true, 300, 600);
+                "test-secret", true, 300, 600);
     }
 
     private void defaultTestHttpClient(String path) throws ClientProtocolException, IOException, NotOkBodyException, BackrollHttpClientException {
@@ -131,7 +131,7 @@ public class BackrollHttpClientTest {
     @Test
     public void testCreateHttpClient_WithValidateCertificateTrue() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollHttpClientException {
         backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
-                "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", true, 300, 600);
+                "test-secret", true, 300, 600);
 
         // Mock HttpClientBuilder
         HttpClientBuilder mockBuilder = mock(HttpClientBuilder.class);
@@ -151,7 +151,7 @@ public class BackrollHttpClientTest {
     @Test
     public void testCreateHttpClient_WithValidateCertificateFalse() throws KeyManagementException, NoSuchAlgorithmException, URISyntaxException, BackrollHttpClientException {
         backupHttpClient = BackrollHttpClient.createProvider(backupHttpClient, "http://api.backup.demo.ccc:5050/api/v1", "backroll-api",
-                "VviX8dALauSyYJMqVYJqf3UyZOpO3joS", false, 300, 600);
+                "test-secret", false, 300, 600);
 
         // Mock HttpClientBuilder
         HttpClientBuilder mockBuilder = mock(HttpClientBuilder.class);

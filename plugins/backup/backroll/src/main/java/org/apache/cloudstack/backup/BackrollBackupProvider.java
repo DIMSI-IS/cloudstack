@@ -59,7 +59,7 @@ public class BackrollBackupProvider extends AdapterBase implements BackupProvide
     public ConfigKey<String> BackrollAppNameConfigKey = new ConfigKey<>("Advanced", String.class, "backup.plugin.backroll.config.appname", "backroll-api",
             "App Name for backroll plugin.", true, ConfigKey.Scope.Zone);
 
-    public ConfigKey<String> BackrollPasswordConfigKey = new ConfigKey<>("Advanced", String.class, "backup.plugin.backroll.config.password", "VviX8dALauSyYJMqVYJqf3UyZOpO3joS",
+    public ConfigKey<String> BackrollPasswordConfigKey = new ConfigKey<>("Secure", String.class, "backup.plugin.backroll.config.password", "",
             "Password for backroll plugin.", true, ConfigKey.Scope.Zone);
 
     private BackrollClient backrollClient;
