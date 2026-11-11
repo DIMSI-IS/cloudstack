@@ -61,6 +61,7 @@ public class BackrollHttpClient {
     private static final String AUTH_TEST = "/auth/cloudstack/test";
     private static final int DEFAULT_WAIT_SECONDS = 120;
     private static final int DEFAULT_POLL_INTERVAL_SECONDS = 10;
+    private static final long INITIAL_POLL_DELAY_MILLIS = 250;
 
     // Backroll may add fields to its answers: the ones the plugin does not read must not make the parsing fail
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -72,7 +73,7 @@ public class BackrollHttpClient {
     private RequestConfig config = null;
     private boolean validateCertificate = false;
     private int restoreWaitSeconds = DEFAULT_WAIT_SECONDS;
-    // Not private so that tests can avoid really sleeping between two polls
+    // Longest delay between two polls of a task. Not private so that tests can avoid really sleeping between two polls
     int pollIntervalSeconds = DEFAULT_POLL_INTERVAL_SECONDS;
 
     private Logger logger = LogManager.getLogger(BackrollClient.class);
@@ -363,6 +364,7 @@ public class BackrollHttpClient {
     private String getWait(String path, int maxWaitSeconds) throws BackrollHttpClientException {
         try {
             final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(maxWaitSeconds);
+            long delayMillis = Math.min(INITIAL_POLL_DELAY_MILLIS, TimeUnit.SECONDS.toMillis(pollIntervalSeconds));
 
             while (true) {
                 final String body = get(path);
@@ -375,12 +377,18 @@ public class BackrollHttpClient {
                     throw new Exception("Timeout of " + maxWaitSeconds + " seconds reached while waiting for a non-pending response.");
                 }
 
-                TimeUnit.SECONDS.sleep(pollIntervalSeconds);
+                TimeUnit.MILLISECONDS.sleep(delayMillis);
+                delayMillis = nextPollDelayMillis(delayMillis, pollIntervalSeconds);
             }
         } catch (Exception exception) {
             logger.error(exception);
             throw new BackrollHttpClientException(exception);
         }
+    }
+
+    // Most tasks end quickly so the first polls are close together, then the delay doubles up to the poll interval for the long ones
+    static long nextPollDelayMillis(long previousDelayMillis, int maxDelaySeconds) {
+        return Math.min(previousDelayMillis * 2, TimeUnit.SECONDS.toMillis(maxDelaySeconds));
     }
 
     public <T> T getWaitParse(String path, Class<T> classOfT) throws BackrollHttpClientException {

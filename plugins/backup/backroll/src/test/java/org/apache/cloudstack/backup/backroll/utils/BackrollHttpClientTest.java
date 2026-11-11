@@ -51,10 +51,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
@@ -255,6 +257,28 @@ public class BackrollHttpClientTest {
 
         assertEquals(success, backupHttpClient.getWait("/task"));
         verify(backupHttpClient, times(3)).get("/task");
+    }
+
+    @Test
+    public void getWait_FirstRetryDoesNotWaitForTheFullPollInterval_Test() throws Exception {
+        // The default poll interval is 10 seconds: a task which ends right after the first poll must not wait that long
+        doReturn("{\"state\":\"PENDING\"}", "{\"state\":\"SUCCESS\"}").when(backupHttpClient).get("/task");
+
+        long start = System.nanoTime();
+        backupHttpClient.getWait("/task");
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+        assertTrue("The retry took " + elapsedMillis + " ms", elapsedMillis < 5000);
+    }
+
+    @Test
+    public void nextPollDelayMillis_DoublesUpToTheMaximum_Test() {
+        assertEquals(500, BackrollHttpClient.nextPollDelayMillis(250, 10));
+        assertEquals(4000, BackrollHttpClient.nextPollDelayMillis(2000, 10));
+        assertEquals(10000, BackrollHttpClient.nextPollDelayMillis(8000, 10));
+        assertEquals(10000, BackrollHttpClient.nextPollDelayMillis(10000, 10));
+        // A poll interval of 0 means no waiting at all
+        assertEquals(0, BackrollHttpClient.nextPollDelayMillis(250, 0));
     }
 
     @Test
