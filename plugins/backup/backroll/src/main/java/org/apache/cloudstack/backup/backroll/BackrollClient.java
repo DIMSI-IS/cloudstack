@@ -16,7 +16,6 @@
 // under the License.
 package org.apache.cloudstack.backup.backroll;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.backup.Backup;
 import org.apache.cloudstack.backup.Backup.Metric;
 import org.apache.cloudstack.backup.BackupOffering;
@@ -155,11 +154,11 @@ public class BackrollClient {
             }
 
             if (TaskState.SUCCESS.equals(TaskState.of(backupResponse))) {
-                BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
+                BackrollBackupStatusSuccessResponse backupStatusSuccessRequestResponse = BackrollHttpClient.OBJECT_MAPPER.readValue(backupResponse, BackrollBackupStatusSuccessResponse.class);
                 status.setState(backupStatusSuccessRequestResponse.state);
                 status.setInfo(backupStatusSuccessRequestResponse.info);
             } else {
-                BackrollBackupStatusResponse backupStatusRequestResponse = new ObjectMapper().readValue(backupResponse, BackrollBackupStatusResponse.class);
+                BackrollBackupStatusResponse backupStatusRequestResponse = BackrollHttpClient.OBJECT_MAPPER.readValue(backupResponse, BackrollBackupStatusResponse.class);
                 status.setState(backupStatusRequestResponse.state);
             }
 

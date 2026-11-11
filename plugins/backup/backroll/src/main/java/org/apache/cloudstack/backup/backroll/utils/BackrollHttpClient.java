@@ -53,6 +53,7 @@ import org.json.JSONObject;
 
 import com.cloud.utils.exception.CloudRuntimeException;
 import com.cloud.utils.nio.TrustAllManager;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class BackrollHttpClient {
@@ -60,6 +61,9 @@ public class BackrollHttpClient {
     private static final String AUTH_TEST = "/auth/cloudstack/test";
     private static final int DEFAULT_WAIT_SECONDS = 120;
     private static final int DEFAULT_POLL_INTERVAL_SECONDS = 10;
+
+    // Backroll may add fields to its answers: the ones the plugin does not read must not make the parsing fail
+    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private URI apiURI;
     private String backrollToken = null;
@@ -209,7 +213,7 @@ public class BackrollHttpClient {
     private <T> T parseValue(String json, Class<T> classOfT) throws BackrollHttpClientException {
         try {
             logger.debug("parseValue {}", json);
-            return new ObjectMapper().readValue(json, classOfT);
+            return OBJECT_MAPPER.readValue(json, classOfT);
         } catch (Exception exception) {
             logger.error(exception);
             throw new BackrollHttpClientException(exception);

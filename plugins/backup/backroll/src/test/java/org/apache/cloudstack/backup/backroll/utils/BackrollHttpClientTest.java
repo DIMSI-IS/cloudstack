@@ -19,6 +19,7 @@ package org.apache.cloudstack.backup.backroll.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cloudstack.backup.backroll.model.response.api.LoginApiResponse;
 import org.apache.cloudstack.backup.backroll.model.response.metrics.virtualMachineBackups.VirtualMachineBackupsResponse;
+import org.apache.cloudstack.backup.backroll.model.response.policy.BackupPoliciesResponse;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.BackrollHttpClientException;
 import org.apache.cloudstack.backup.backroll.utils.BackrollHttpClient.NotOkBodyException;
 import org.apache.cloudstack.utils.security.SSLUtils;
@@ -269,6 +270,21 @@ public class BackrollHttpClientTest {
         verify(backupHttpClient, times(2)).okBody(Mockito.any(CloseableHttpResponse.class));
         verify(httpClient, times(1)).execute(Mockito.any(HttpGet.class));
         verify(response, times(1)).close();
+    }
+
+    @Test
+    public void getWaitParse_IgnoresUnknownFields_Test() throws Exception {
+        // Backroll answers with fields the plugin does not read, they must not make the parsing fail
+        String policies = "{\"state\":\"SUCCESS\",\"new_top_level_field\":1,\"info\":[{\"name\":\"test-policy\",\"id\":\"73eafc5b\","
+                + "\"retention_week\":4,\"retention_year\":1,\"externalhook\":null,\"enabled\":false}]}";
+        backupHttpClient.pollIntervalSeconds = 0;
+        doReturn(policies).when(backupHttpClient).get("/task");
+
+        BackupPoliciesResponse result = backupHttpClient.getWaitParse("/task", BackupPoliciesResponse.class);
+
+        assertEquals(1, result.backupPolicies.size());
+        assertEquals("test-policy", result.backupPolicies.get(0).name);
+        assertEquals("73eafc5b", result.backupPolicies.get(0).id);
     }
 
     @Test

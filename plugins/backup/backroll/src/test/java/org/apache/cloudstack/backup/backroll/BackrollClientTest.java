@@ -195,6 +195,19 @@ public class BackrollClientTest {
     }
 
     @Test
+    public void checkBackupTaskStatus_IgnoresUnknownFields_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
+        // Backroll may add fields the plugin does not read, they must not make the parsing fail
+        doReturn("{\"state\":\"SUCCESS\",\"info\":\"test\",\"new_field\":{\"a\":1}}").when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+        BackrollTaskStatus status = client.checkBackupTaskStatus("dummytaskid");
+        assertEquals(TaskState.SUCCESS, status.getState());
+        assertEquals("test", status.getInfo());
+
+        doReturn("{\"state\":\"PROGRESS\",\"info\":{\"progress\":10},\"new_field\":true}").when(backrollHttpClientMock).get(Mockito.matches(".*/status/.*"));
+        status = client.checkBackupTaskStatus("dummytaskid");
+        assertEquals(TaskState.PROGRESS, status.getState());
+    }
+
+    @Test
     public void checkBackupTaskStatus_FailedTask_Test() throws IOException, BackrollHttpClientException, BackrollClientException {
         // Backroll answers with an HTTP error status and the state of the task in the body when the task failed
         String body = "{\"detail\":{\"state\":\"FAILURE\",\"current\":1,\"total\":1,\"status\":\"boom\"}}";
